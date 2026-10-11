@@ -1,0 +1,1044 @@
+/*
+ * Two stage kinds: `lines` (player/stage/kit-lines.ts) and `timeline` (player/stage/kit-timeline.ts),
+ * and the static account of each that the page carries (render/clip-kits-extra.ts).
+ *
+ * The kits position and size everything through CSSOM; this file is the look, and it is the
+ * stage's look (css/stage.css): a deep field, parts as panes that float over it, one accent and
+ * three outcome colours. Colour comes from the shell tokens (which resolve to their dark values on
+ * the stage and to their light ones on paper) and from the stage's own --st-pane, --st-pane-line,
+ * --st-shadow and --st-on-solid. A soft tone is the tone itself mixed into the field, so it holds
+ * on the field and on paper alike. The parts are boxes from the engine's core (st-box, st-tint,
+ * st-txt, st-l, st-ring), given a class of their own here.
+ *
+ * Nothing in this file moves by itself: no transitions, no animations. Motion is the engine's.
+ */
+
+/* ============================================================================================
+ * lines
+ * ============================================================================================ */
+/* The window on the lines, and the sheet that moves through it when they are taller than the stage. */
+.st-ln-view[data-scroll] {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 12px, black calc(100% - 12px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, black 12px, black calc(100% - 12px), transparent 100%);
+}
+.st-ln-pan,
+.st-ln-under,
+.st-ln-col,
+.st-ln-over {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+.st-ln-pan {
+  font-family: var(--lt-font-mono);
+  line-height: 1.34;
+  color: var(--lt-ink);
+}
+.st-ln-view[data-format="text"] .st-ln-pan,
+.st-ln-view[data-format="math"] .st-ln-pan {
+  font-family: var(--lt-font-prose);
+}
+
+/* A line is a row: [number or mark] [text] [values]. */
+.st-box.st-ln {
+  display: block;
+  border-radius: 5px;
+  box-shadow: none;
+  font-size: 1em;
+  font-weight: 400;
+  line-height: inherit;
+  text-align: left;
+  color: inherit;
+}
+.st-ln > .st-tint,
+.st-ln[data-lift="1"] > .st-tint {
+  border: 0;
+  outline: 0;
+  /* Square on the side that carries the edge: a rounded 3px edge reads as a bracket. */
+  border-radius: 0 5px 5px 0;
+  background: transparent;
+  box-shadow: none;
+}
+/* A tone is a band, an edge and a mark where the line number was: never colour alone. */
+.st-ln > .st-tint[data-tone="accent"] {
+  background: color-mix(in srgb, var(--lt-accent) 26%, transparent);
+  box-shadow: inset 4px 0 0 var(--lt-accent);
+}
+.st-ln > .st-tint[data-tone="good"] {
+  background: color-mix(in srgb, var(--lt-good) 26%, transparent);
+  box-shadow: inset 4px 0 0 var(--lt-good);
+}
+.st-ln > .st-tint[data-tone="bad"] {
+  background: color-mix(in srgb, var(--lt-bad) 26%, transparent);
+  box-shadow: inset 4px 0 0 var(--lt-bad);
+}
+.st-ln > .st-tint[data-tone="warn"] {
+  background: color-mix(in srgb, var(--lt-warn) 26%, transparent);
+  box-shadow: inset 4px 0 0 var(--lt-warn);
+}
+.st-ln[data-tone="muted"] > .st-txt {
+  color: var(--lt-ink-3);
+}
+.st-ln > .st-ring {
+  border-radius: 5px;
+}
+/* In the spotlight: a lit plate behind the line. Adjacent lit lines join into one block. */
+.st-ln-plate {
+  position: absolute;
+  inset: 0;
+  background: var(--st-pane, var(--lt-surface));
+  box-shadow: inset 4px 0 0 var(--lt-accent);
+  opacity: 0;
+}
+/* Just changed, or just landed. */
+.st-ln-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--lt-warn) 34%, transparent);
+  opacity: 0;
+}
+.st-ln-no {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center end;
+  width: var(--ln-nw);
+  height: var(--ln-rh);
+  font-size: 0.78em;
+  font-variant-numeric: tabular-nums;
+  color: var(--lt-ink-3);
+}
+.st-ln-n,
+.st-ln-g {
+  grid-area: 1 / 1;
+}
+.st-ln-g {
+  font-family: var(--lt-font-ui);
+  font-size: 1.2em;
+  font-weight: 800;
+  line-height: 1;
+}
+.st-ln[data-tone="good"] .st-ln-n,
+.st-ln[data-tone="bad"] .st-ln-n,
+.st-ln[data-tone="warn"] .st-ln-n {
+  visibility: hidden;
+}
+.st-ln[data-tone="good"] .st-ln-g::before {
+  content: "\2713";
+  color: var(--lt-good);
+}
+.st-ln[data-tone="bad"] .st-ln-g::before {
+  content: "\2715";
+  color: var(--lt-bad);
+}
+.st-ln[data-tone="warn"] .st-ln-g::before {
+  content: "!";
+  color: var(--lt-warn);
+}
+.st-ln > .st-txt {
+  position: absolute;
+  left: var(--ln-tx);
+  top: 0;
+  display: grid;
+  place-items: center start;
+  width: var(--ln-tw);
+  max-width: none;
+  height: 100%;
+  padding: 0;
+}
+/* Whitespace in code is the author's. */
+.st-ln > .st-txt > .st-l {
+  white-space: pre;
+  font-variant-numeric: normal;
+  tab-size: 4;
+}
+/* A line too long for a narrow stage wraps, and the rest hangs under its own indentation. */
+.st-ln-view[data-wrap] .st-ln > .st-txt > .st-l {
+  padding-left: var(--ln-hang, 0);
+  text-indent: calc(-1 * var(--ln-hang, 0px));
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.st-ln-view[data-format="text"] .st-ln > .st-txt > .st-l {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+.st-ln-view[data-format="math"] .st-ln > .st-txt {
+  place-items: center;
+}
+.st-ln-math {
+  grid-area: 1 / 1;
+  width: max-content;
+  white-space: nowrap;
+}
+.st-ln-math math,
+.st-ln-ghost math {
+  display: inline-block;
+  display: inline math;
+  max-width: none;
+  margin: 0;
+  overflow: visible;
+  font-size: 1em;
+}
+/* The copy of a derivation step that travels down to become the next one. */
+.st-ln-ghost {
+  display: grid;
+  place-items: center;
+  white-space: nowrap;
+  color: var(--lt-accent);
+  pointer-events: none;
+}
+
+/* A value beside a line: name, then the value in the code face. */
+.st-box.st-ln-val {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  padding: 0 10px;
+  border-radius: 999px;
+  box-shadow: none;
+  font-family: var(--lt-font-mono);
+  font-size: var(--ln-val, 0.8125rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--lt-ink);
+}
+.st-ln-val > .st-tint {
+  border: 1.5px solid var(--st-pane-line, var(--lt-line-strong));
+  border-radius: inherit;
+  outline: 0;
+  background: var(--lt-surface);
+  box-shadow: none;
+}
+.st-ln-val > .st-tint[data-tone="accent"] {
+  border-color: var(--lt-accent);
+  background: color-mix(in srgb, var(--lt-accent) 26%, var(--lt-surface));
+}
+.st-ln-val > .st-tint[data-tone="good"] {
+  border: 2px solid var(--lt-good);
+  background: color-mix(in srgb, var(--lt-good) 26%, var(--lt-surface));
+}
+.st-ln-val > .st-tint[data-tone="bad"] {
+  border: 2px solid var(--lt-bad);
+  background: color-mix(in srgb, var(--lt-bad) 26%, var(--lt-surface));
+}
+.st-ln-val > .st-tint[data-tone="warn"] {
+  border: 1.5px dashed var(--lt-warn);
+  background: color-mix(in srgb, var(--lt-warn) 26%, var(--lt-surface));
+}
+.st-ln-val > .st-tint[data-tone="muted"] {
+  border-style: dashed;
+  background: transparent;
+}
+.st-box.st-ln-val[data-tone] {
+  color: var(--lt-ink);
+}
+.st-ln-valglow {
+  position: absolute;
+  inset: 1.5px;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--lt-warn) 42%, transparent);
+  opacity: 0;
+}
+.st-ln-key {
+  position: relative;
+  font-family: var(--lt-font-ui);
+  font-size: calc(var(--ln-val, 0.8125rem) - 1px);
+  font-weight: 600;
+  color: var(--lt-ink-3);
+}
+.st-ln-val > .st-txt {
+  padding: 0;
+}
+
+/* An annotation: hangs from its line by the accent edge. */
+.st-box.st-ln-note {
+  display: block;
+  border-radius: 0 8px 8px 8px;
+  box-shadow: none;
+  font-family: var(--lt-font-ui);
+  font-size: var(--ln-note, 0.8125rem);
+  font-weight: 500;
+  line-height: 1.38;
+  text-align: left;
+  color: var(--lt-ink);
+}
+.st-ln-note::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -4px;
+  width: 3px;
+  height: 5px;
+  background: var(--lt-accent);
+}
+.st-ln-note > .st-tint,
+.st-ln-note > .st-tint[data-tone] {
+  border: 1px solid var(--st-pane-line, var(--lt-line));
+  border-left: 3px solid var(--lt-accent);
+  border-radius: inherit;
+  outline: 0;
+  background: var(--lt-surface);
+  box-shadow: var(--st-shadow);
+}
+.st-box.st-ln-note[data-tone] {
+  color: var(--lt-ink);
+}
+.st-ln-note > .st-tint[data-tone="good"] {
+  border-left-color: var(--lt-good);
+}
+.st-ln-note > .st-tint[data-tone="bad"] {
+  border-left-color: var(--lt-bad);
+}
+.st-ln-note > .st-tint[data-tone="warn"] {
+  border-left-color: var(--lt-warn);
+}
+.st-ln-note > .st-txt {
+  position: absolute;
+  inset: 0;
+  place-items: center start;
+  max-width: none;
+  padding: 0 10px 0 14px;
+}
+.st-ln-note .st-l {
+  white-space: normal;
+}
+
+/* The pointer: a tab in the gutter that ends in an arrowhead, and the band of light it carries. */
+.st-box.st-ln-ptr {
+  z-index: 2;
+  border-radius: 5px 0 0 5px;
+  box-shadow: none;
+  font-family: var(--lt-font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--st-on-solid, var(--lt-accent-ink));
+}
+.st-box.st-ln-ptr[data-tone] {
+  color: var(--st-on-solid, var(--lt-accent-ink));
+}
+.st-ln-ptr > .st-tint,
+.st-ln-ptr > .st-tint[data-tone] {
+  border: 0;
+  border-radius: inherit;
+  outline: 0;
+  box-shadow: none;
+}
+.st-ln-ptr > .st-tint {
+  background: var(--lt-accent);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
+}
+.st-ln-ptr > .st-tint[data-tone="good"] {
+  background: var(--lt-good);
+}
+.st-ln-ptr > .st-tint[data-tone="bad"] {
+  background: var(--lt-bad);
+}
+.st-ln-ptr > .st-tint[data-tone="warn"] {
+  background: var(--lt-warn);
+}
+.st-ln-ptr > .st-tint[data-tone="muted"],
+.st-ln-ptr > .st-tint[data-tone="neutral"] {
+  background: var(--lt-ink-2);
+}
+.st-ln-ptr > .st-ring {
+  display: none;
+}
+.st-ln-ptr > .st-txt {
+  padding: 0 12px 0 5px;
+}
+.st-ln-beam {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--lt-accent) 24%, transparent);
+  opacity: 0;
+}
+
+/* The bracket: an outline round a range of lines, with its label on the top edge. */
+.st-box.st-ln-bracket {
+  border-radius: 9px;
+  box-shadow: none;
+  pointer-events: none;
+}
+.st-ln-bracket > .st-tint,
+.st-ln-bracket > .st-tint[data-tone] {
+  border: 2px solid var(--lt-accent);
+  border-radius: inherit;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.st-ln-bracket > .st-tint[data-tone="good"] {
+  border-color: var(--lt-good);
+}
+.st-ln-bracket > .st-tint[data-tone="bad"] {
+  border-color: var(--lt-bad);
+}
+.st-ln-bracket > .st-tint[data-tone="warn"] {
+  border-color: var(--lt-warn);
+  border-style: dashed;
+}
+.st-ln-bracket > .st-tint[data-tone="muted"],
+.st-ln-bracket > .st-tint[data-tone="neutral"] {
+  border-color: var(--lt-line-strong);
+}
+.st-ln-bracket > .st-ring {
+  display: none;
+}
+.st-ln-bracket > .st-txt {
+  position: absolute;
+  top: -9px;
+  left: 0;
+  max-width: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--lt-accent);
+  font-family: var(--lt-font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--st-on-solid, var(--lt-accent-ink));
+}
+.st-ln-bracket-bare > .st-txt {
+  display: none;
+}
+
+/* What code always carries. Top left, not moved by the camera. */
+.st-ln-flag {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  left: 14px;
+  margin: 0;
+  font-family: var(--lt-font-ui);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: var(--lt-ink-2);
+}
+.st-ln-lang {
+  margin-right: 0.7em;
+  font-weight: 700;
+  letter-spacing: var(--lt-tracking-caps);
+  text-transform: uppercase;
+  color: var(--lt-ink);
+}
+
+@media (forced-colors: active) {
+  .st-ln-plate,
+  .st-ln-beam {
+    border: 1px solid Highlight;
+  }
+  .st-ln > .st-tint[data-tone="good"],
+  .st-ln > .st-tint[data-tone="bad"],
+  .st-ln > .st-tint[data-tone="warn"],
+  .st-ln > .st-tint[data-tone="accent"] {
+    border: 1px solid CanvasText;
+  }
+  .st-ln-ptr > .st-tint {
+    background: Highlight;
+    forced-color-adjust: none;
+  }
+  .st-ln-ptr > .st-txt {
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+}
+
+/* ============================================================================================
+ * timeline
+ * ============================================================================================ */
+.st-tl-view[data-scroll] {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
+}
+.st-tl-pan,
+.st-tl-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+.st-tl-pan {
+  font-family: var(--lt-font-ui);
+  color: var(--lt-ink);
+}
+.st-tl-wires {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* The track: a line with weight, and an arrowhead for the direction of time. */
+.st-wire.st-tl-track {
+  stroke: var(--lt-ink-2);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+.st-head.st-tl-track {
+  fill: var(--lt-ink-2);
+}
+.st-wire.st-tl-track[data-tone="accent"] {
+  stroke: var(--lt-accent);
+}
+.st-head.st-tl-track[data-tone="accent"] {
+  fill: var(--lt-accent);
+}
+.st-wire.st-tl-track[data-tone="good"] {
+  stroke: var(--lt-good);
+  stroke-width: 4;
+}
+.st-head.st-tl-track[data-tone="good"] {
+  fill: var(--lt-good);
+}
+.st-wire.st-tl-track[data-tone="bad"] {
+  stroke: var(--lt-bad);
+  stroke-width: 4;
+}
+.st-head.st-tl-track[data-tone="bad"] {
+  fill: var(--lt-bad);
+}
+.st-wire.st-tl-track[data-tone="warn"] {
+  stroke: var(--lt-warn);
+  stroke-dasharray: none;
+  stroke-width: 4;
+}
+.st-head.st-tl-track[data-tone="warn"] {
+  fill: var(--lt-warn);
+}
+.st-wire.st-tl-track[data-tone="muted"] {
+  stroke: var(--lt-line-strong);
+  stroke-width: 2;
+}
+.st-head.st-tl-track[data-tone="muted"] {
+  fill: var(--lt-line-strong);
+}
+/* The stretch a marker has passed. */
+.st-tl-done {
+  fill: none;
+  stroke: var(--lt-accent);
+  stroke-width: 6;
+  stroke-linecap: round;
+  opacity: 0;
+}
+
+/* An event: a dot on the track, a stem, a card of words. */
+.st-tl-dot {
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 3.5px solid var(--lt-ink);
+  border-radius: 50%;
+  background: var(--lt-bg);
+}
+.st-tl-ping {
+  position: absolute;
+  inset: -4px;
+  border: 2px solid var(--lt-accent);
+  border-radius: 50%;
+  opacity: 0;
+}
+.st-tl-stem {
+  background: var(--lt-line-strong);
+  transform-origin: 50% 100%;
+}
+.st-tl-ev[data-side="below"] > .st-tl-stem {
+  transform-origin: 50% 0;
+}
+.st-tl-ev[data-side="right"] > .st-tl-stem {
+  transform-origin: 0 50%;
+}
+.st-tl-bar {
+  border-radius: 4px;
+  background: var(--lt-ink);
+}
+.st-tl-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Above the track the words sit against the stem, however many rows they take. */
+  justify-content: flex-end;
+  text-align: center;
+  transform-origin: 50% 100%;
+}
+.st-tl-ev[data-side="below"] > .st-tl-card {
+  justify-content: flex-start;
+  transform-origin: 50% 0;
+}
+.st-tl-ev[data-side="right"] > .st-tl-card {
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+  transform-origin: 0 0;
+}
+/* In the spotlight the card is lifted onto a plate, over whatever has receded behind it. */
+.st-tl-plate {
+  position: absolute;
+  inset: -7px -9px;
+  border: 1.5px solid var(--lt-accent);
+  border-radius: 10px;
+  background: var(--lt-surface);
+  box-shadow: var(--st-shadow);
+  opacity: 0;
+}
+.st-tl-when {
+  position: relative;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  color: var(--lt-ink);
+}
+.st-tl-label {
+  position: relative;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--lt-ink-2);
+}
+.st-tl-ev[data-lit="1"] .st-tl-label {
+  color: var(--lt-ink);
+}
+.st-tl-words {
+  display: inline-block;
+}
+.st-tl-detail {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  font-size: 0.78125rem;
+  line-height: 1.36;
+  color: var(--lt-ink-2);
+  opacity: 0;
+}
+/* An event that spans the lanes is the moment the threads meet: it is set heavier. */
+.st-tl-ev[data-cross] .st-tl-label {
+  font-weight: 700;
+  color: var(--lt-ink);
+}
+/* Tone: the dot fills and carries a mark, and the `when` takes the colour. Never colour alone. */
+.st-tl-dot::after {
+  position: absolute;
+  inset: -3.5px;
+  display: grid;
+  place-items: center;
+  font-family: var(--lt-font-ui);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--st-on-solid, var(--lt-surface));
+}
+.st-tl-ev[data-tone="good"] .st-tl-dot::after {
+  content: "\2713";
+}
+.st-tl-ev[data-tone="bad"] .st-tl-dot::after {
+  content: "\2715";
+}
+.st-tl-ev[data-tone="warn"] .st-tl-dot::after {
+  content: "!";
+  color: var(--lt-warn);
+}
+.st-tl-ev[data-tone="accent"] .st-tl-dot {
+  border-color: var(--lt-accent);
+  background: var(--lt-accent);
+}
+.st-tl-ev[data-tone="accent"] .st-tl-bar {
+  background: var(--lt-accent);
+}
+.st-tl-ev[data-tone="accent"] .st-tl-when {
+  color: var(--lt-accent);
+}
+.st-tl-ev[data-tone="good"] .st-tl-dot {
+  border-color: var(--lt-good);
+  background: var(--lt-good);
+}
+.st-tl-ev[data-tone="good"] .st-tl-bar {
+  background: var(--lt-good);
+}
+.st-tl-ev[data-tone="good"] .st-tl-when,
+.st-tl-ev[data-tone="good"][data-cross] .st-tl-label {
+  color: var(--lt-good);
+}
+.st-tl-ev[data-tone="bad"] .st-tl-dot {
+  border-color: var(--lt-bad);
+  background: var(--lt-bad);
+}
+.st-tl-ev[data-tone="bad"] .st-tl-bar {
+  background: var(--lt-bad);
+}
+.st-tl-ev[data-tone="bad"] .st-tl-when {
+  color: var(--lt-bad);
+}
+.st-tl-ev[data-tone="warn"] .st-tl-dot {
+  border-color: var(--lt-warn);
+  border-style: dashed;
+  background: var(--lt-bg);
+}
+.st-tl-ev[data-tone="warn"] .st-tl-when {
+  color: var(--lt-warn);
+}
+.st-tl-ev[data-tone="muted"] .st-tl-dot {
+  border-color: var(--lt-line-strong);
+  border-width: 2px;
+}
+.st-tl-ev[data-tone="muted"] .st-tl-when,
+.st-tl-ev[data-tone="muted"] .st-tl-label {
+  color: var(--lt-ink-3);
+}
+
+/* Wide, with lanes: each lane has its own faint ground. */
+.st-tl-band {
+  border-radius: 10px;
+  background: var(--st-rule, color-mix(in srgb, var(--lt-surface) 55%, transparent));
+  opacity: 0;
+}
+/* Lanes: a name at the head of each track when wide; a number, and a legend, when the tracks stand side by side. */
+.st-tl-lane {
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: var(--lt-tracking-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--lt-ink-2);
+}
+.st-tl-lane-no {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--lt-ink-2);
+  font-size: 0.59375rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--lt-bg);
+}
+.st-tl-legend {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  left: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin: 0;
+  font-family: var(--lt-font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--lt-ink-2);
+}
+.st-tl-legend-item {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+.st-tl-tick {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--lt-ink);
+}
+
+/* The marker: "now". A ring on the track; with lanes, a line across them. */
+.st-tl-mk-ring {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border: 3px solid var(--lt-accent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--lt-accent) 28%, transparent);
+}
+.st-tl-mk-line {
+  border-radius: 1px;
+  background: var(--lt-accent);
+}
+.st-tl-mk-tab {
+  display: flex;
+  justify-content: center;
+  width: 0;
+  height: 0;
+}
+.st-tl-mk-tab > .st-tl-words {
+  flex: none;
+  height: 20px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--lt-accent);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 20px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--st-on-solid, var(--lt-accent-ink));
+}
+.st-tl-mk[data-tone="good"] .st-tl-mk-ring {
+  border-color: var(--lt-good);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--lt-good) 28%, transparent);
+}
+.st-tl-mk[data-tone="bad"] .st-tl-mk-ring {
+  border-color: var(--lt-bad);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--lt-bad) 28%, transparent);
+}
+.st-tl-mk[data-tone="warn"] .st-tl-mk-ring {
+  border-color: var(--lt-warn);
+  border-style: dashed;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--lt-warn) 28%, transparent);
+}
+.st-tl-mk[data-tone="good"] .st-tl-mk-line,
+.st-tl-mk[data-tone="good"] .st-tl-mk-tab > .st-tl-words {
+  background: var(--lt-good);
+}
+.st-tl-mk[data-tone="bad"] .st-tl-mk-line,
+.st-tl-mk[data-tone="bad"] .st-tl-mk-tab > .st-tl-words {
+  background: var(--lt-bad);
+}
+
+/* A span: a bracket under the stretch between two events (beside it, when the track is vertical). */
+.st-tl-span-line {
+  box-sizing: border-box;
+  border: 2px solid var(--lt-accent);
+  border-top: 0;
+  border-radius: 0 0 7px 7px;
+}
+.st-tl-span[data-dir="v"] > .st-tl-span-line {
+  border: 2px solid var(--lt-accent);
+  border-right: 0;
+  border-radius: 7px 0 0 7px;
+}
+.st-tl-span-tab {
+  box-sizing: border-box;
+  height: 20px;
+  padding: 0 9px;
+  border: 1px solid var(--lt-accent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--lt-accent) 22%, var(--lt-bg));
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 18px;
+  white-space: nowrap;
+  color: var(--lt-accent);
+}
+.st-tl-span[data-dir="v"] > .st-tl-span-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 0;
+  height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.st-tl-span[data-dir="v"] > .st-tl-span-tab > .st-tl-words {
+  flex: none;
+  padding: 7px 1px;
+  border-radius: 3px;
+  background: var(--lt-bg);
+  writing-mode: vertical-rl;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.st-tl-span[data-tone="good"] > .st-tl-span-line {
+  border-color: var(--lt-good);
+}
+.st-tl-span[data-tone="good"] > .st-tl-span-tab {
+  border-color: var(--lt-good);
+  background: color-mix(in srgb, var(--lt-good) 22%, var(--lt-bg));
+  color: var(--lt-good);
+}
+.st-tl-span[data-tone="bad"] > .st-tl-span-line {
+  border-color: var(--lt-bad);
+}
+.st-tl-span[data-tone="bad"] > .st-tl-span-tab {
+  border-color: var(--lt-bad);
+  background: color-mix(in srgb, var(--lt-bad) 22%, var(--lt-bg));
+  color: var(--lt-bad);
+}
+.st-tl-span[data-tone="warn"] > .st-tl-span-line {
+  border-color: var(--lt-warn);
+  border-style: dashed;
+}
+.st-tl-span[data-tone="warn"] > .st-tl-span-tab {
+  border-color: var(--lt-warn);
+  background: color-mix(in srgb, var(--lt-warn) 22%, var(--lt-bg));
+  color: var(--lt-warn);
+}
+.st-tl-span[data-tone="muted"] > .st-tl-span-line,
+.st-tl-span[data-tone="neutral"] > .st-tl-span-line {
+  border-color: var(--lt-line-strong);
+}
+.st-tl-span[data-tone="muted"] > .st-tl-span-tab,
+.st-tl-span[data-tone="neutral"] > .st-tl-span-tab {
+  border-color: var(--lt-line-strong);
+  background: var(--lt-surface);
+  color: var(--lt-ink-2);
+}
+
+@media (forced-colors: active) {
+  .st-wire.st-tl-track,
+  .st-tl-done {
+    stroke: CanvasText;
+  }
+  .st-head.st-tl-track {
+    fill: CanvasText;
+  }
+  .st-tl-dot,
+  .st-tl-mk-ring {
+    border-color: CanvasText;
+  }
+  .st-tl-bar,
+  .st-tl-mk-line {
+    background: CanvasText;
+  }
+}
+
+/* ============================================================================================
+ * The static account of the two stages: what the page says with scripting off, on paper, and
+ * folded under the player as the clip's text version (render/clip-kits-extra.ts).
+ * ============================================================================================ */
+.lt-xs > * + * {
+  margin-top: var(--lt-space-2);
+}
+.lt-xs-label,
+.lt-xs-flag,
+.lt-xs-parts {
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+}
+.lt-xs-language,
+.lt-xs-lanes,
+.lt-xs-flag {
+  color: var(--lt-ink-2);
+}
+.lt-xs-flag {
+  font-size: var(--lt-size-xs);
+}
+.lt-xs-lines {
+  margin: 0;
+  padding: var(--lt-space-3) var(--lt-space-3) var(--lt-space-3) 0;
+  border: 1px solid var(--lt-line);
+  border-radius: var(--lt-radius);
+  background: var(--lt-sunken);
+  list-style: none;
+  counter-reset: lt-xs-line;
+}
+.lt-xs-lines > li {
+  display: grid;
+  grid-template-columns: 2.6em minmax(0, 1fr);
+  counter-increment: lt-xs-line;
+  min-height: 1.5em;
+}
+.lt-xs-lines > li::before {
+  content: counter(lt-xs-line);
+  padding-right: 0.9em;
+  font-family: var(--lt-font-mono);
+  font-size: var(--lt-size-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.85;
+  text-align: right;
+  color: var(--lt-ink-3);
+}
+.lt-xs-line,
+.lt-xs-note {
+  grid-column: 2;
+  min-width: 0;
+}
+/* Whitespace in code is the author's; a long line wraps instead of widening a 320px page. */
+.lt-xs-lines[data-format="code"] code,
+.lt-xs-lines > li > .lt-xs-line > code {
+  /* A block of its own, so a line that wraps is one rectangle and not a run across two rows. */
+  display: block;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  font-family: var(--lt-font-mono);
+  font-size: var(--lt-size-s);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 4;
+}
+.lt-xs-lines[data-format="text"] {
+  font-family: var(--lt-font-prose);
+}
+.lt-xs-lines[data-format="math"] > li {
+  padding-block: 0.3em;
+  font-size: 1.1875rem;
+}
+.lt-xs-lines[data-format="math"] math[display="block"] {
+  /* Flowing, so a line wider than its column wraps between runs, before a relation sign. */
+  display: inline-block;
+  display: inline math;
+  max-width: none;
+  margin: 0.15em 0;
+  overflow: visible;
+  font-size: 1em;
+}
+.lt-xs-note {
+  display: block;
+  margin: 0.1em 0 0.35em;
+  padding-left: 0.6em;
+  border-left: 3px solid var(--lt-accent);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-xs);
+  color: var(--lt-ink-2);
+}
+.lt-xs-parts {
+  margin: 0;
+  padding-left: 1.3em;
+}
+.lt-xs-key,
+.lt-xs-when {
+  font-weight: 700;
+}
+.lt-xs-timeline {
+  margin: 0 0 0 0.5em;
+  padding: 0;
+  border-left: 3px solid var(--lt-line-strong);
+  list-style: none;
+}
+.lt-xs-timeline > li {
+  padding: 0.3em 0 0.3em 0.9em;
+}
+.lt-xs-when {
+  font-family: var(--lt-font-ui);
+  font-variant-numeric: tabular-nums;
+}
+.lt-xs-lane {
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-xs);
+  font-weight: 700;
+  letter-spacing: var(--lt-tracking-caps);
+  text-transform: uppercase;
+  color: var(--lt-ink-2);
+}
+.lt-xs-detail {
+  display: block;
+  font-size: var(--lt-size-s);
+  color: var(--lt-ink-2);
+}

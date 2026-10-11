@@ -1,0 +1,20 @@
+/*
+ * The player's one stylesheet. The build inlines these in this order, so later files may rely on
+ * earlier ones. tokens, base, shell, blocks and print belong to the shell; figures, questions and
+ * steps each belong to their own builder and use only the tokens and shared pieces defined above.
+ * stage-tokens and stage are the clip engine's (player/stage/): the first holds every colour the
+ * stage adds, as tokens.css does for the shell. stage-kits-extra and frame belong to the lines and
+ * timeline kits and to the custom frame, and are written to sit inside the stage.
+ */
+@import "./css/tokens.css";
+@import "./css/base.css";
+@import "./css/shell.css";
+@import "./css/blocks.css";
+@import "./css/figures.css";
+@import "./css/questions.css";
+@import "./css/steps.css";
+@import "./css/stage-tokens.css";
+@import "./css/stage.css";
+@import "./css/stage-kits-extra.css";
+@import "./css/frame.css";
+@import "./css/print.css";

@@ -1,0 +1,215 @@
+/*
+ * Step-through scenes.
+ *
+ * As rendered, with no script, every step is on the page in order, each with its own number, its
+ * predict question as plain text and its own values. When the player takes a step-through over it
+ * adds .lt-steps-ready: one step shows at a time under the Previous and Next buttons, the number
+ * moves into the status line beside them, and one panel follows the values.
+ *
+ * A value that a step changed is marked in words by the renderer ("was 0"). The heavier line and
+ * the tint here only repeat that.
+ */
+.lt-step-list {
+  padding: 0;
+  list-style: none;
+}
+.lt-step + .lt-step {
+  margin-top: var(--lt-space-6);
+  padding-top: var(--lt-space-5);
+  border-top: 1px solid var(--lt-line);
+}
+.lt-step > * + *,
+.lt-step-body > * + * {
+  margin-top: var(--lt-space-4);
+}
+.lt-step-name {
+  display: block;
+  margin-top: var(--lt-space-1);
+}
+
+/* ----- one step at a time */
+.lt-steps-ready .lt-step + .lt-step {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+/* The number is in the status line now. It stays in the heading for anyone moving by headings. */
+.lt-steps-ready .lt-step-count,
+.lt-steps-ready .lt-step-untitled {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.lt-steps-ready .lt-step-name {
+  margin-top: 0;
+}
+.lt-steps-ready .lt-step-untitled + * {
+  margin-top: 0;
+}
+
+.lt-step-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lt-space-2) var(--lt-space-3);
+  margin-bottom: var(--lt-space-5);
+  padding-bottom: var(--lt-space-4);
+  border-bottom: 1px solid var(--lt-line);
+}
+/* Beside the buttons while it is only the counter; a longer message takes a line of its own. */
+.lt-step-status {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.4;
+  color: var(--lt-ink-2);
+}
+.lt-step-at {
+  font-weight: 650;
+  color: var(--lt-ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.lt-step-note::before {
+  content: "\00b7";
+  margin-inline: 0.45em;
+  color: var(--lt-ink-3);
+}
+
+/* ----- values */
+.lt-state-panel,
+.lt-state-box {
+  padding: var(--lt-space-3) var(--lt-space-4);
+  border: 1px solid var(--lt-line);
+  border-radius: var(--lt-radius);
+  background: var(--lt-sunken);
+}
+.lt-state-panel {
+  margin-bottom: var(--lt-space-5);
+}
+.lt-steps-ready .lt-step .lt-state-box {
+  display: none;
+}
+.lt-state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lt-space-2);
+  margin-top: var(--lt-space-2);
+  font-family: var(--lt-font-mono);
+  font-size: var(--lt-size-s);
+  line-height: 1.4;
+}
+.lt-state-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--lt-space-2);
+  min-width: 0;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius-s);
+  background: var(--lt-surface);
+}
+.lt-state-row dt {
+  color: var(--lt-ink-2);
+}
+.lt-state-row dd {
+  min-width: 0;
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.lt-state-row[data-changed] {
+  border-color: var(--lt-ink);
+  box-shadow: inset 0 0 0 1px var(--lt-ink);
+  background: var(--lt-mark);
+}
+.lt-state-row[data-changed] .lt-state-value {
+  font-weight: 700;
+}
+.lt-state-flag {
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-xs);
+  font-weight: 500;
+  color: var(--lt-ink-2);
+}
+
+/* ----- a question asked before a step is shown */
+.lt-predict {
+  padding: var(--lt-space-4) var(--lt-space-5);
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  background: var(--lt-sunken);
+}
+.lt-predict > * + * {
+  margin-top: var(--lt-space-4);
+}
+.lt-predict-kicker {
+  display: block;
+  margin-bottom: var(--lt-space-2);
+  color: var(--lt-accent);
+}
+.lt-predict .lt-prompt {
+  font-size: var(--lt-size-body);
+  font-weight: 600;
+  line-height: 1.45;
+}
+.lt-predict .lt-choices > legend {
+  margin-bottom: var(--lt-space-3);
+}
+@media (max-width: 30rem) {
+  .lt-predict {
+    padding: var(--lt-space-3) var(--lt-space-4);
+  }
+  /* Two buttons share the row instead of the second one dropping below. */
+  .lt-step-nav .lt-btn {
+    flex: 1 1 auto;
+  }
+}
+
+@media (forced-colors: active) {
+  .lt-state-row[data-changed] {
+    border-width: 3px;
+    border-style: double;
+  }
+}
+
+/* On paper: every step, each with its own values, and no controls. */
+@media print {
+  .lt-step-nav,
+  .lt-state-panel {
+    display: none !important;
+  }
+  .lt-step[hidden],
+  .lt-step-body[hidden] {
+    display: block !important;
+  }
+  .lt-steps-ready .lt-step .lt-state-box {
+    display: block;
+  }
+  .lt-steps-ready .lt-step + .lt-step {
+    margin-top: 18pt;
+    padding-top: 12pt;
+    border-top: 0.5pt solid var(--lt-line-strong);
+  }
+  .lt-steps-ready .lt-step-count,
+  .lt-steps-ready .lt-step-untitled {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+  }
+  .lt-step {
+    break-inside: avoid;
+  }
+}

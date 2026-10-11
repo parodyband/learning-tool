@@ -1,0 +1,1088 @@
+/*
+ * Figures. Two looks from one piece of markup:
+ *
+ *   as rendered   lists and tables, set tidily. This is what a reader without the script gets, and
+ *                 what every figure falls back to.
+ *   drawn         the player marks a figure's root with data-drawn and positions its parts; the
+ *                 rules scoped to [data-drawn] turn the same list items into nodes, labels on
+ *                 connectors and labels over arrows. The positions themselves are rules in a
+ *                 sheet the player constructs, one per element, so no element carries a style
+ *                 attribute.
+ *
+ * Connectors, lifelines and chart marks are SVG that sits behind the text (z-index -1 inside the
+ * figure's own stacking context). Text that crosses a line has an opaque background, so its
+ * contrast never depends on what is drawn underneath. Text that lies over the SVG is also
+ * positioned: a contrast checker reads "positioned" as "in front", and unpositioned text as behind
+ * anything positioned, whatever the z-index says.
+ *
+ * A highlighted part (data-hl="true", or .lt-hl on a drawn mark) is always shown by shape as well
+ * as tint: a ring round a box, a bar beside a line of code, a heavier stroke on a connector.
+ */
+
+/* ----- the frame every figure shares */
+.lt-figure {
+  padding: clamp(0.875rem, 4.5%, 1.25rem);
+  border: 1px solid var(--lt-line);
+  border-radius: var(--lt-radius);
+  background: var(--lt-surface);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.45;
+}
+.lt-figure ol,
+.lt-figure ul {
+  padding: 0;
+  list-style: none;
+}
+.lt-figure-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.1rem 0.65rem;
+}
+.lt-figure-label > .lt-label {
+  color: var(--lt-accent);
+}
+.lt-figure-caption {
+  font-weight: 600;
+}
+.lt-figure-language {
+  font-size: var(--lt-size-xs);
+  font-weight: 600;
+  color: var(--lt-ink-2);
+}
+/* How far to trust what follows, said in words: an invented curve, or code nobody has run. */
+.lt-figure-flag {
+  width: fit-content;
+  margin-top: var(--lt-space-2);
+  padding: 0.2em 0.6em;
+  border: 1px dashed var(--lt-line-strong);
+  border-radius: var(--lt-radius-s);
+  font-size: var(--lt-size-xs);
+  font-weight: 600;
+  color: var(--lt-ink-2);
+}
+.lt-figure-body {
+  position: relative;
+  margin-top: var(--lt-space-4);
+  /* Queried below, so a figure adapts to its own column and not to the window. */
+  container: lt-figure / inline-size;
+}
+.lt-figure-desc {
+  margin-top: var(--lt-space-4);
+  padding-top: var(--lt-space-3);
+  border-top: 1px solid var(--lt-line);
+  color: var(--lt-ink-2);
+  line-height: 1.5;
+}
+.lt-figure-source {
+  margin-top: var(--lt-space-2);
+  font-size: var(--lt-size-xs);
+  color: var(--lt-ink-3);
+}
+/* Two gauges the player watches: the column's width, and the size of a line of text. Never seen. */
+.lt-figure-ruler {
+  height: 0;
+  visibility: hidden;
+}
+.lt-figure-probe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ----- shared by flow and sequence: "A → B" */
+.lt-route-arrow {
+  margin-inline: 0.45em;
+  color: var(--lt-ink-3);
+}
+.lt-route-arrow::before {
+  content: "→";
+  content: "→" / "";
+}
+.lt-route-self {
+  color: var(--lt-ink-2);
+}
+.lt-links-label {
+  margin-top: var(--lt-space-4);
+}
+
+/* ----- flow, as rendered: the parts as boxes, then the connections as sentences */
+.lt-flow-nodes {
+  display: grid;
+  gap: var(--lt-space-2);
+}
+.lt-node {
+  padding: 0.5em 0.75em;
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  background: var(--lt-bg);
+  overflow-wrap: break-word;
+}
+.lt-node-label {
+  display: block;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.lt-node-detail {
+  display: block;
+  margin-top: 0.15em;
+  font-size: var(--lt-size-xs);
+  line-height: 1.35;
+  color: var(--lt-ink-2);
+}
+.lt-flow-edges {
+  margin-top: var(--lt-space-2);
+}
+.lt-edge {
+  padding-block: 0.2em;
+}
+.lt-edge-label {
+  font-weight: 600;
+}
+
+/* ----- flow, drawn */
+.lt-flow[data-drawn],
+.lt-seq[data-drawn="true"],
+.lt-chart-frame {
+  position: relative;
+  z-index: 0;
+}
+.lt-flow-svg,
+.lt-seq-svg {
+  display: none;
+}
+.lt-flow[data-drawn] > .lt-flow-svg,
+.lt-seq[data-drawn="true"] > .lt-seq-svg,
+.lt-chart-svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  display: block;
+  overflow: visible;
+  pointer-events: none;
+}
+.lt-flow[data-scroll] {
+  overflow-x: auto;
+}
+.lt-flow[data-drawn] > .lt-flow-nodes {
+  display: block;
+}
+.lt-flow[data-drawn] .lt-node {
+  position: absolute;
+  padding: 0.55em 0.6em;
+  text-align: center;
+  /* A long word in a narrow node is broken at a syllable, with a hyphen, where the language is known. Short words are left whole. */
+  -webkit-hyphens: auto;
+  hyphens: auto;
+  hyphenate-limit-chars: 10 3 3;
+}
+/* A connector's label sits on the connector, and interrupts it. */
+.lt-flow[data-drawn] .lt-edge {
+  position: absolute;
+  inline-size: max-content;
+  max-inline-size: var(--lt-chip-max, 6.5em);
+  padding: 0.05em 0.4em;
+  border-radius: var(--lt-radius-s);
+  background: var(--lt-surface);
+  font-size: var(--lt-size-xs);
+  line-height: 1.25;
+  text-align: center;
+  color: var(--lt-ink-2);
+  overflow-wrap: anywhere;
+}
+/*
+ * On a lane that runs down the side of a narrow drawing the label is set along the lane, reading
+ * downwards, so that it takes the width of one line and not of the whole phrase.
+ */
+.lt-flow[data-drawn] .lt-edge[data-turned] {
+  max-inline-size: 12em;
+  padding: 0.4em 0.05em;
+  writing-mode: vertical-rl;
+}
+/* Position says what these said in words. They stay in the page for a screen reader. */
+.lt-flow[data-drawn] > .lt-links-label,
+.lt-flow[data-drawn] .lt-edge .lt-route,
+.lt-flow[data-drawn] .lt-edge[data-bare],
+.lt-flow[data-drawn] .lt-edge[data-unplaced],
+.lt-seq[data-drawn="true"] > .lt-parts-label,
+.lt-seq[data-drawn="true"] > .lt-links-label,
+.lt-seq[data-drawn="true"] .lt-msg .lt-route {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ----- connectors (flow and sequence) */
+.lt-conn-line,
+.lt-conn-halo,
+.lt-conn-cross {
+  fill: none;
+}
+.lt-conn-line {
+  stroke: var(--lt-ink-3);
+  stroke-width: 1.5;
+}
+.lt-conn-head {
+  fill: var(--lt-ink-3);
+}
+/* Butt ends throughout: each connector path carries two zero-length strokes (see `spanning` in the player) that a round or square end would paint as dots. */
+.lt-conn-halo {
+  stroke: none;
+  stroke-width: 10;
+  stroke-linejoin: round;
+}
+.lt-conn-dashed .lt-conn-line {
+  stroke-dasharray: 5 4;
+}
+.lt-conn.lt-hl .lt-conn-halo {
+  stroke: var(--lt-mark);
+}
+.lt-conn.lt-hl .lt-conn-line {
+  stroke: var(--lt-accent);
+  stroke-width: 3;
+}
+.lt-conn.lt-hl .lt-conn-head {
+  fill: var(--lt-accent);
+  stroke: var(--lt-accent);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+/* A message that never arrives: a broken line that stops short and ends in a cross. */
+.lt-conn-lost .lt-conn-line {
+  stroke-dasharray: 2 4;
+}
+.lt-conn-cross {
+  stroke: var(--lt-bad);
+  stroke-width: 2.25;
+}
+.lt-conn.lt-hl .lt-conn-cross {
+  stroke-width: 3.5;
+}
+
+/* ----- sequence, as rendered (and when its column is too narrow to draw in) */
+.lt-seq-actors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lt-space-2);
+  margin-top: var(--lt-space-2);
+}
+.lt-actor {
+  padding: 0.3em 0.7em;
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  background: var(--lt-bg);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.lt-seq-messages {
+  margin-top: var(--lt-space-2);
+  counter-reset: lt-msg;
+}
+.lt-msg {
+  position: relative;
+  padding: 0.55em 0 0.55em 2.3em;
+  border-top: 1px solid var(--lt-line);
+  counter-increment: lt-msg;
+}
+.lt-msg::before {
+  content: counter(lt-msg);
+  /* The list already says which message this is; the printed number is for the eye. */
+  content: counter(lt-msg) / "";
+  position: absolute;
+  left: 0;
+  top: 0.6em;
+  width: 1.7em;
+  height: 1.7em;
+  border: 1px solid var(--lt-line-strong);
+  border-radius: 50%;
+  font-size: var(--lt-size-xs);
+  font-weight: 600;
+  line-height: 1.6em;
+  text-align: center;
+  color: var(--lt-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.lt-msg .lt-route {
+  display: block;
+  font-size: var(--lt-size-xs);
+  font-weight: 600;
+  color: var(--lt-ink-2);
+}
+/* In the list a message's route is a line of its own, so the colon that joins it to the label is not shown. */
+.lt-msg .lt-sep {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.lt-msg-text {
+  display: block;
+}
+.lt-msg-lost {
+  display: inline-block;
+  margin-left: 0.2em;
+  padding: 0 0.4em;
+  border: 1px solid var(--lt-bad);
+  border-radius: var(--lt-radius-s);
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lt-bad);
+  white-space: nowrap;
+}
+.lt-msg-lost::before {
+  content: "✕ ";
+  content: "✕ " / "";
+}
+
+/* ----- sequence, drawn */
+.lt-seq[data-drawn="true"] > .lt-seq-actors {
+  display: grid;
+  grid-template-columns: repeat(var(--lt-cols, 2), minmax(0, 1fr));
+  align-items: end;
+  gap: 0;
+  margin: 0;
+}
+.lt-seq[data-drawn="true"] .lt-actor {
+  position: relative;
+  justify-self: center;
+  max-width: calc(100% - 0.5em);
+  padding: 0.35em 0.6em;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.lt-seq[data-drawn="true"] > .lt-seq-messages {
+  margin: 0;
+  padding: 0.7em 0 0.5em;
+}
+.lt-seq[data-drawn="true"] .lt-msg {
+  padding: 0.3em 0 1.25em;
+  border: 0;
+}
+.lt-seq[data-drawn="true"] .lt-msg[data-self] {
+  padding-bottom: 2.2em;
+}
+.lt-seq[data-drawn="true"] .lt-msg[data-self] .lt-msg-text {
+  text-align: start;
+}
+.lt-seq[data-drawn="true"] .lt-msg::before {
+  content: none;
+}
+.lt-seq[data-drawn="true"] .lt-msg-text {
+  position: relative;
+  width: max-content;
+  padding: 0.05em 0.4em;
+  border-radius: var(--lt-radius-s);
+  background: var(--lt-surface);
+  font-size: var(--lt-size-xs);
+  line-height: 1.3;
+  text-align: center;
+}
+.lt-seq-lifeline {
+  stroke: var(--lt-line-strong);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+.lt-seq-lifeline.lt-hl {
+  stroke: var(--lt-accent);
+  stroke-width: 3;
+  stroke-dasharray: none;
+}
+
+/* ----- layers: a stack, top first */
+.lt-layers {
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  background: var(--lt-bg);
+  overflow: hidden;
+}
+.lt-layer {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  align-items: baseline;
+  gap: 0.1em var(--lt-space-4);
+  padding: 0.6em 0.9em;
+}
+.lt-layer + .lt-layer {
+  border-top: 1px solid var(--lt-line-strong);
+}
+.lt-layer-label {
+  font-weight: 600;
+  line-height: 1.3;
+}
+.lt-layer-detail {
+  font-size: var(--lt-size-xs);
+  line-height: 1.4;
+  color: var(--lt-ink-2);
+}
+@container lt-figure (max-width: 24rem) {
+  .lt-layer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ----- timeline: a rail with a mark for each event */
+.lt-timeline {
+  display: grid;
+  grid-template-columns: fit-content(8.5em) 0.75rem minmax(0, 1fr);
+  column-gap: 0.75em;
+}
+.lt-event {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  padding-bottom: 1.1em;
+}
+.lt-event:last-child {
+  padding-bottom: 0;
+}
+.lt-event-when {
+  grid-area: 1 / 1;
+  padding-block: 0.15em;
+  font-size: var(--lt-size-xs);
+  font-weight: 650;
+  line-height: 1.5;
+  text-align: right;
+  color: var(--lt-ink-2);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.lt-event-body {
+  grid-area: 1 / 3;
+  padding: 0.1em 0.4em;
+  margin: 0 -0.4em;
+  border-radius: var(--lt-radius-s);
+}
+.lt-event-label {
+  display: block;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.lt-event-detail {
+  display: block;
+  margin-top: 0.1em;
+  font-size: var(--lt-size-xs);
+  line-height: 1.4;
+  color: var(--lt-ink-2);
+}
+/* The mark, and the rail running on from it to the next event. */
+.lt-event::before {
+  content: "";
+  grid-area: 1 / 2;
+  justify-self: center;
+  z-index: 1;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-top: 0.35em;
+  border: 2px solid var(--lt-ink-3);
+  border-radius: 50%;
+  background: var(--lt-surface);
+}
+.lt-event::after {
+  content: "";
+  grid-area: 1 / 2;
+  justify-self: center;
+  width: 2px;
+  height: calc(100% + 1.1em - 0.35em);
+  margin-top: 0.35em;
+  background: var(--lt-line-strong);
+}
+.lt-event:last-child::after {
+  display: none;
+}
+@container lt-figure (max-width: 22rem) {
+  .lt-timeline {
+    grid-template-columns: 0.75rem minmax(0, 1fr);
+  }
+  .lt-event-when {
+    grid-area: 1 / 2;
+    text-align: left;
+  }
+  .lt-event-body {
+    grid-area: 2 / 2;
+  }
+  .lt-event::before {
+    grid-area: 1 / 1;
+  }
+  .lt-event::after {
+    grid-area: 1 / 1 / 3 / 1;
+  }
+}
+
+/* ----- compare: a table, and a card per row when its column is too narrow for one */
+.lt-compare th,
+.lt-compare td {
+  overflow-wrap: break-word;
+}
+.lt-compare thead th {
+  vertical-align: bottom;
+}
+/* The figure's own rule follows the table, so the last row does not need one. */
+.lt-compare tbody tr:last-child > *,
+.lt-chart-data tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.lt-cell-column {
+  display: none;
+}
+@container lt-figure (max-width: 26rem) {
+  .lt-compare,
+  .lt-compare tbody,
+  .lt-compare tr,
+  .lt-compare th,
+  .lt-compare td {
+    display: block;
+  }
+  /* The column headings are repeated beside each value instead, so the row of them is not shown. */
+  .lt-compare thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .lt-compare tbody tr {
+    padding-block: var(--lt-space-3);
+    border-top: 1px solid var(--lt-line-strong);
+  }
+  .lt-compare tbody tr:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+  .lt-compare tbody th {
+    padding: 0 0 var(--lt-space-1);
+    border: 0;
+    font-weight: 650;
+  }
+  .lt-compare tbody td {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    column-gap: var(--lt-space-3);
+    padding: 0.3em 0;
+    border: 0;
+    border-top: 1px solid var(--lt-line);
+  }
+  .lt-cell-column {
+    display: block;
+    font-size: var(--lt-size-xs);
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--lt-ink-2);
+  }
+}
+
+/* ----- chart */
+.lt-chart-plot {
+  font-size: var(--lt-size-xs);
+  line-height: 1.25;
+  color: var(--lt-ink-2);
+}
+.lt-chart-title {
+  font-weight: 600;
+}
+.lt-chart-ytitle {
+  margin-bottom: 0.55em;
+}
+.lt-chart-xtitle {
+  margin-top: 0.4em;
+  text-align: center;
+}
+.lt-chart[data-drawn="sideways"] .lt-chart-xtitle {
+  text-align: left;
+}
+.lt-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em 1.2em;
+  margin-bottom: 0.7em;
+  color: var(--lt-ink);
+}
+.lt-chart-key-in,
+.lt-chart-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+}
+.lt-chart-key.lt-hl,
+.lt-chart-end.lt-hl {
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+}
+.lt-chart-swatch {
+  flex: none;
+  display: block;
+  overflow: visible;
+}
+.lt-chart-frame > span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.lt-chart-tick {
+  padding-inline: 3px;
+  border-radius: 3px;
+}
+.lt-chart-xtick {
+  text-align: center;
+}
+.lt-chart[data-mark="bar"] .lt-chart-frame > .lt-chart-xtick,
+.lt-chart-frame > .lt-chart-cat,
+.lt-chart-frame > .lt-chart-end {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.lt-chart-xtick.lt-hl,
+.lt-chart-cat.lt-hl {
+  outline: 2px solid var(--lt-accent);
+  outline-offset: -1px;
+  background: var(--lt-mark);
+  color: var(--lt-ink);
+  font-weight: 700;
+}
+/* Text that stands on the plot covers what is behind it. */
+.lt-chart-value,
+.lt-chart-cat,
+.lt-chart-end {
+  background: var(--lt-surface);
+  color: var(--lt-ink);
+}
+.lt-chart-value {
+  padding-inline: 2px;
+}
+.lt-chart-cat,
+.lt-chart-end {
+  font-weight: 600;
+}
+.lt-chart-cat {
+  padding-inline: 3px;
+  border-radius: 3px;
+}
+
+.lt-chart-grid,
+.lt-chart-axis,
+.lt-chart-line,
+.lt-chart-line-halo {
+  fill: none;
+}
+.lt-chart-grid {
+  stroke: var(--lt-line);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.lt-chart-axis {
+  stroke: var(--lt-line-strong);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.lt-chart-band {
+  fill: var(--lt-mark);
+}
+/* One accent and two inks. Each series also has its own dash, marker or fill, so colour is never the only difference. */
+.lt-s1 {
+  --lt-series: var(--lt-accent);
+}
+.lt-s2 {
+  --lt-series: var(--lt-ink);
+}
+.lt-s3 {
+  --lt-series: var(--lt-ink-3);
+}
+.lt-chart-line {
+  stroke: var(--lt-series);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.lt-chart-line.lt-s2 {
+  stroke-dasharray: 7 4;
+}
+.lt-chart-line.lt-s3 {
+  stroke-dasharray: 1.5 4.5;
+}
+/* Keeps two lines apart where they cross. */
+.lt-chart-line-halo {
+  stroke: var(--lt-surface);
+  stroke-width: 5;
+  stroke-linejoin: round;
+}
+.lt-chart-line.lt-hl {
+  stroke-width: 4;
+}
+.lt-chart-line-halo.lt-hl {
+  stroke: var(--lt-mark);
+  stroke-width: 11;
+  stroke-linecap: round;
+}
+.lt-chart-dot {
+  fill: var(--lt-series);
+  stroke: var(--lt-surface);
+  stroke-width: 1.5;
+}
+.lt-chart-dot.lt-s2 {
+  fill: var(--lt-surface);
+  stroke: var(--lt-series);
+  stroke-width: 2;
+}
+.lt-chart-dot.lt-hl {
+  stroke: var(--lt-ink);
+  stroke-width: 2.5;
+}
+.lt-chart-bar.lt-s1 {
+  fill: var(--lt-accent);
+}
+.lt-chart-bar.lt-s2 {
+  fill: var(--lt-surface);
+  stroke: var(--lt-ink);
+  stroke-width: 1.5;
+}
+/* The third series is hatched: its fill is a pattern, set as an attribute by the player. */
+.lt-chart-bar.lt-s3 {
+  stroke: var(--lt-ink-3);
+  stroke-width: 1;
+}
+.lt-chart-hatch-ground {
+  fill: var(--lt-surface);
+}
+.lt-chart-hatch-line {
+  fill: none;
+  stroke: var(--lt-ink-3);
+  stroke-width: 2.4;
+}
+.lt-chart-bar.lt-hl {
+  stroke: var(--lt-ink);
+  stroke-width: 2.5;
+}
+.lt-chart-readout {
+  margin-top: var(--lt-space-3);
+  padding: 0.4em 0.75em;
+  border-left: 3px solid var(--lt-accent);
+  background: var(--lt-mark);
+  font-size: var(--lt-size-xs);
+  font-weight: 600;
+  color: var(--lt-ink);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+/* The data table, folded away once the chart is drawn. Quieter than a reveal in the prose. */
+.lt-chart-table {
+  margin-top: var(--lt-space-3);
+  border: 0;
+  background: none;
+}
+.lt-chart-table > summary {
+  min-height: 2rem;
+  padding: 0;
+  font-size: var(--lt-size-xs);
+}
+.lt-chart-table[open] > summary {
+  border-bottom: 0;
+}
+.lt-chart-table > .lt-reveal-body {
+  padding: var(--lt-space-2) 0 0;
+}
+.lt-chart-data .lt-table {
+  font-size: var(--lt-size-xs);
+}
+.lt-chart-data td {
+  text-align: right;
+}
+.lt-chart-data thead th + th {
+  text-align: right;
+}
+
+/* ----- lines: code, a derivation, or plain lines */
+.lt-lines {
+  padding-block: 0.6em;
+  border: 1px solid var(--lt-line);
+  border-radius: var(--lt-radius-s);
+  background: var(--lt-sunken);
+  counter-reset: lt-line;
+}
+.lt-lines > li {
+  position: relative;
+  min-height: 1.6em;
+  padding: 0 0.9em 0 0.75em;
+  /* The same colour as the ground until the line is highlighted, so nothing moves when it is. */
+  border-left: 3px solid var(--lt-sunken);
+  counter-increment: lt-line;
+}
+.lt-lines[data-format="code"] {
+  font-family: var(--lt-font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+.lt-lines[data-format="code"] > li {
+  padding-left: 3.1em;
+}
+.lt-lines[data-format="code"] > li::before {
+  content: counter(lt-line);
+  content: counter(lt-line) / "";
+  position: absolute;
+  left: 0;
+  width: 2.3em;
+  text-align: right;
+  color: var(--lt-ink-3);
+  font-variant-numeric: tabular-nums;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.lt-lines code {
+  display: block;
+  /*
+   * A wrapped line continues under its own first character: the indent is hung, not lost. Capped,
+   * so that deeply nested code still has most of a narrow column to wrap in. (Both lengths are in
+   * ch on purpose: a percentage means a different width in each of the two properties.)
+   */
+  padding: 0 0 0 min(calc(var(--lt-indent, 0) * 1ch), 12ch);
+  border: 0;
+  background: none;
+  font-size: 1em;
+  text-indent: max(calc(var(--lt-indent, 0) * -1ch), -12ch);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 4;
+}
+/*
+ * Working: display math, read a line at a time. The rest of a figure is set smaller than the prose
+ * beside it; working is set larger than the prose, because a fraction puts two rows of digits
+ * where prose has one, and with room between lines to match.
+ *
+ * A line is one <math> per run between relation signs (see render/figures.ts). Each is laid out as
+ * display math but flows like a word, so a line wider than its column wraps before an "=". A single
+ * run wider than the column scrolls sideways inside its own line, and the player makes such a line
+ * reachable from the keyboard.
+ */
+.lt-lines[data-format="math"] {
+  font-size: 1.25rem;
+  /* Larger with the column, never as small as the prose: 19px in a phone's column, 21px on a desk. */
+  font-size: clamp(1.1875rem, 1.1rem + 0.6cqi, 1.3125rem);
+  line-height: 1.5;
+}
+.lt-lines[data-format="math"] > li {
+  padding-block: 0.4em;
+  text-align: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.lt-lines[data-format="math"] > li:focus-visible {
+  /* Inside the line: the list clips nothing, but a ring outside would sit on the lines above and below. */
+  outline-offset: -2px;
+}
+.lt-lines[data-format="math"] math {
+  /* The size is the line's own, set above. */
+  font-size: 1em;
+}
+.lt-lines[data-format="math"] math[display="block"] {
+  /* Flowing, not a block of its own. The second form is the one written for math; the first is for a browser that does not know it. */
+  display: inline-block;
+  display: inline math;
+  margin: 0.2em 0;
+  max-width: none;
+  overflow: visible;
+}
+.lt-lines[data-format="math"] > li > code {
+  font-size: 0.8em;
+}
+.lt-lines[data-format="text"] {
+  font-family: var(--lt-font-prose);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.lt-lines[data-format="text"] > li {
+  padding-block: 0.2em;
+}
+.lt-line-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ----- a highlighted part */
+.lt-node[data-hl="true"],
+.lt-actor[data-hl="true"],
+.lt-event[data-hl="true"] > .lt-event-body {
+  outline: 2px solid var(--lt-accent);
+  outline-offset: 2px;
+  border-color: var(--lt-ink);
+  background: var(--lt-mark);
+  color: var(--lt-ink);
+}
+.lt-node[data-hl="true"] .lt-node-detail,
+.lt-layer[data-hl="true"] .lt-layer-detail,
+.lt-event[data-hl="true"] .lt-event-detail {
+  color: var(--lt-ink);
+}
+.lt-event[data-hl="true"] > .lt-event-when {
+  color: var(--lt-ink);
+}
+.lt-event[data-hl="true"]::before {
+  border-color: var(--lt-accent);
+  background: var(--lt-accent);
+  outline: 2px solid var(--lt-accent);
+  outline-offset: 2px;
+}
+.lt-flow[data-drawn] .lt-edge[data-hl="true"],
+.lt-seq[data-drawn="true"] .lt-msg[data-hl="true"] .lt-msg-text {
+  outline: 2px solid var(--lt-accent);
+  outline-offset: 1px;
+  background: var(--lt-mark);
+  color: var(--lt-ink);
+}
+/* In a list a highlighted connection or message is ringed as a whole row. */
+.lt-flow:not([data-drawn]) .lt-edge[data-hl="true"],
+.lt-seq:not([data-drawn="true"]) .lt-msg[data-hl="true"] {
+  outline: 2px solid var(--lt-accent);
+  outline-offset: -2px;
+  background: var(--lt-mark);
+  color: var(--lt-ink);
+}
+.lt-seq:not([data-drawn="true"]) .lt-msg[data-hl="true"] .lt-route {
+  color: var(--lt-ink);
+}
+.lt-flow:not([data-drawn]) .lt-edge[data-hl="true"] {
+  padding-inline: 0.5em;
+}
+/* Inside the stack a ring would be cut off, so it is drawn just within the layer. */
+.lt-layer[data-hl="true"] {
+  outline: 3px solid var(--lt-accent);
+  outline-offset: -3px;
+  background: var(--lt-mark);
+  color: var(--lt-ink);
+}
+.lt-compare tr[data-hl="true"] > *,
+.lt-compare th[data-hl="true"],
+.lt-compare td.lt-hl-col,
+.lt-chart-data tr[data-hl="true"] > *,
+.lt-chart-data th[data-hl="true"] {
+  background: var(--lt-mark);
+  color: var(--lt-ink);
+}
+.lt-compare tr[data-hl="true"] > *,
+.lt-chart-data tr[data-hl="true"] > * {
+  border-block: 2px solid var(--lt-accent);
+}
+.lt-compare th[data-hl="true"],
+.lt-compare td.lt-hl-col,
+.lt-chart-data th[data-hl="true"] {
+  border-inline: 2px solid var(--lt-accent);
+}
+.lt-compare th[data-hl="true"],
+.lt-chart-data th[data-hl="true"] {
+  border-top: 2px solid var(--lt-accent);
+}
+.lt-compare tr[data-hl="true"] .lt-cell-column,
+.lt-compare td.lt-hl-col .lt-cell-column {
+  color: var(--lt-ink);
+}
+.lt-lines > li[data-hl="true"] {
+  border-left-color: var(--lt-accent);
+  background: var(--lt-mark);
+  color: var(--lt-ink);
+}
+.lt-lines[data-format="code"] > li[data-hl="true"]::before {
+  color: var(--lt-ink);
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lt-node,
+  .lt-actor,
+  .lt-layer,
+  .lt-event-body,
+  .lt-lines > li {
+    transition:
+      background-color var(--lt-speed) ease,
+      border-color var(--lt-speed) ease;
+  }
+}
+
+/*
+ * Forced colours. The tokens already map to system colours, and SVG keeps the colours it is given,
+ * so the marks stay visible. Tints are gone, so each highlight is carried by its ring or stroke,
+ * drawn in the system's own highlight colour.
+ */
+@media (forced-colors: active) {
+  .lt-node[data-hl="true"],
+  .lt-actor[data-hl="true"],
+  .lt-layer[data-hl="true"],
+  .lt-event[data-hl="true"] > .lt-event-body,
+  .lt-edge[data-hl="true"],
+  .lt-msg[data-hl="true"] .lt-msg-text,
+  .lt-chart-xtick.lt-hl,
+  .lt-chart-cat.lt-hl {
+    outline-color: Highlight;
+    outline-width: 3px;
+  }
+  .lt-lines > li[data-hl="true"] {
+    border-left-color: Highlight;
+    border-left-style: double;
+    outline: 1px solid Highlight;
+    outline-offset: -1px;
+  }
+  .lt-conn.lt-hl .lt-conn-line,
+  .lt-seq-lifeline.lt-hl,
+  .lt-chart-line.lt-hl {
+    stroke: Highlight;
+  }
+  .lt-conn.lt-hl .lt-conn-head {
+    fill: Highlight;
+    stroke: Highlight;
+  }
+  .lt-conn.lt-hl .lt-conn-halo,
+  .lt-chart-line-halo.lt-hl {
+    stroke: none;
+  }
+  .lt-chart-bar.lt-hl,
+  .lt-chart-dot.lt-hl {
+    stroke: Highlight;
+    stroke-width: 3;
+  }
+  .lt-conn-cross {
+    stroke: CanvasText;
+  }
+  .lt-chart-grid {
+    stroke: GrayText;
+    stroke-dasharray: 1 3;
+  }
+  .lt-compare tr[data-hl="true"] > *,
+  .lt-compare th[data-hl="true"],
+  .lt-compare td.lt-hl-col,
+  .lt-chart-data tr[data-hl="true"] > *,
+  .lt-chart-data th[data-hl="true"] {
+    border-color: Highlight;
+    border-width: 3px;
+  }
+  .lt-chart-readout {
+    border: 1px solid CanvasText;
+    border-left: 4px solid Highlight;
+  }
+}
+
+@media print {
+  /* On paper there is nothing to scroll, and the source chips are not printed, so neither is the line that introduces them. */
+  .lt-flow[data-scroll] {
+    overflow: visible;
+  }
+  .lt-figure {
+    break-inside: avoid;
+  }
+  .lt-figure-source {
+    display: none;
+  }
+}

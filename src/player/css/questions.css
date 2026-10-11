@@ -1,0 +1,455 @@
+/*
+ * Questions: checkpoints, and the pieces a step's predict question shares with them.
+ *
+ * The markup reads two ways. As rendered, with no script, a question is plain text: its options
+ * are a list and its answer sits in a disclosure. Once the player has taken a question over it
+ * adds .lt-ready to it (.lt-steps-ready for a step-through), and only then do the options look
+ * like things to press. So a question the player left alone never looks operable.
+ *
+ * Right and wrong are always said in words and carried by the kind of border (solid and heavier,
+ * or dashed). Colour only repeats them.
+ */
+.lt-choices,
+.lt-rate {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.lt-question > * + * {
+  margin-top: var(--lt-space-4);
+}
+.lt-prompt {
+  font-size: var(--lt-size-lede);
+  line-height: 1.45;
+}
+.lt-prompt label {
+  display: block;
+}
+
+/* ----- a line about an earlier visit */
+.lt-earlier {
+  padding-left: var(--lt-space-3);
+  border-left: 3px solid var(--lt-line-strong);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.5;
+  color: var(--lt-ink-2);
+}
+
+/* ----- choices: radios in a fieldset whose legend is the prompt */
+.lt-choices > legend,
+.lt-rate > legend {
+  max-width: 100%;
+  padding: 0;
+  margin-bottom: var(--lt-space-4);
+}
+.lt-options {
+  display: grid;
+  gap: var(--lt-space-2);
+}
+/* As rendered: a plain list. */
+.lt-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--lt-space-3);
+}
+.lt-option::before {
+  content: "\2013";
+  color: var(--lt-ink-3);
+}
+.lt-ready .lt-option,
+.lt-steps-ready .lt-option {
+  align-items: start;
+  padding: 0.7rem var(--lt-space-4);
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  background: var(--lt-surface);
+  cursor: pointer;
+}
+.lt-ready .lt-option::before,
+.lt-steps-ready .lt-option::before {
+  content: none;
+}
+/* A radio or a checkbox is itself the smallest target the page allows, though its whole row can be pressed. */
+.lt-option input,
+.lt-look input,
+.lt-rate-option input {
+  flex: none;
+  width: var(--lt-target);
+  height: var(--lt-target);
+  margin: 0.1em 0 0;
+  accent-color: var(--lt-accent);
+  cursor: inherit;
+}
+.lt-ready .lt-option:hover,
+.lt-steps-ready .lt-option:hover {
+  border-color: var(--lt-ink);
+}
+/* The whole row shows focus, so the ring is as large as the thing that can be pressed. */
+.lt-option:focus-within,
+.lt-rate-option:focus-within {
+  outline: var(--lt-focus);
+  outline-offset: 2px;
+}
+.lt-option input:focus-visible,
+.lt-rate-option input:focus-visible {
+  outline: none;
+}
+/* Chosen: a heavier line as well as a tint. The radio itself is filled too. */
+.lt-option[data-picked="true"] {
+  border-color: var(--lt-accent);
+  box-shadow: inset 0 0 0 1px var(--lt-accent);
+  background: var(--lt-accent-soft);
+}
+.lt-option[data-locked="true"],
+.lt-option[data-state] {
+  cursor: default;
+}
+
+/* ----- judged: an option, an item to order, the number field */
+.lt-mark {
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  font-weight: 650;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.lt-option > .lt-mark {
+  grid-column: 2;
+  margin-top: var(--lt-space-1);
+}
+[data-state="right"] > .lt-mark {
+  color: var(--lt-good);
+}
+[data-state="wrong"] > .lt-mark {
+  color: var(--lt-bad);
+}
+/*
+ * The tick and the cross. Generated content, so that they are seen beside the words without being
+ * read out on top of them: the second declaration gives them empty alternative text where that is
+ * understood, and the first is what other browsers keep.
+ */
+[data-state="right"] > .lt-mark::before,
+.lt-verdict[data-verdict="right"]::before {
+  content: "\2713\00a0";
+  content: "\2713\00a0" / "";
+}
+[data-state="wrong"] > .lt-mark::before,
+.lt-verdict[data-verdict="wrong"]::before {
+  content: "\2717\00a0";
+  content: "\2717\00a0" / "";
+}
+.lt-ready .lt-option[data-state="right"],
+.lt-steps-ready .lt-option[data-state="right"],
+.lt-ready .lt-order-item[data-state="right"] {
+  border-color: var(--lt-good);
+  box-shadow: inset 0 0 0 1px var(--lt-good);
+  background: var(--lt-good-soft);
+}
+.lt-ready .lt-option[data-state="wrong"],
+.lt-steps-ready .lt-option[data-state="wrong"],
+.lt-ready .lt-order-item[data-state="wrong"] {
+  border-style: dashed;
+  border-color: var(--lt-bad);
+  box-shadow: none;
+  background: var(--lt-bad-soft);
+}
+
+/* ----- the buttons under a question, and what is said after one is pressed */
+.lt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lt-space-3);
+}
+.lt-feedback {
+  font-size: 1rem;
+}
+.lt-feedback > * + * {
+  margin-top: var(--lt-space-2);
+}
+.lt-verdict {
+  font-weight: 650;
+}
+.lt-feedback[data-tone="good"] .lt-verdict {
+  color: var(--lt-good);
+}
+.lt-feedback[data-tone="bad"] .lt-verdict {
+  color: var(--lt-bad);
+}
+
+/* ----- the explanation, once it is earned */
+.lt-explain {
+  padding-top: var(--lt-space-4);
+  border-top: 1px solid var(--lt-line);
+}
+.lt-explain > * + * {
+  margin-top: var(--lt-space-5);
+}
+.lt-why > * + *,
+.lt-solution > * + *,
+.lt-model > * + * {
+  margin-top: var(--lt-space-2);
+}
+.lt-model > .lt-label ~ .lt-label {
+  margin-top: var(--lt-space-5);
+}
+.lt-solution-value {
+  font-family: var(--lt-font-ui);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.lt-solution-range,
+.lt-reflect-how,
+.lt-private,
+.lt-rate-kept,
+.lt-order-how {
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.5;
+  color: var(--lt-ink-2);
+}
+
+/* ----- the answer with no script: every option, whether it is the answer, and why */
+.lt-answer .lt-reveal-body > * + * {
+  margin-top: var(--lt-space-4);
+}
+.lt-key {
+  padding: 0;
+  list-style: none;
+}
+.lt-key li + li {
+  margin-top: var(--lt-space-3);
+  padding-top: var(--lt-space-3);
+  border-top: 1px solid var(--lt-line);
+}
+.lt-key-verdict {
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  font-weight: 650;
+}
+.lt-key-why {
+  margin-top: var(--lt-space-1);
+  font-size: 1rem;
+  color: var(--lt-ink-2);
+}
+.lt-key-order {
+  padding-left: 1.4em;
+}
+.lt-key-order li + li {
+  margin-top: var(--lt-space-1);
+}
+
+/* ----- ordering */
+.lt-order {
+  padding-left: 1.2em;
+  list-style: disc;
+}
+.lt-order-item + .lt-order-item {
+  margin-top: var(--lt-space-2);
+}
+.lt-ready .lt-order {
+  display: grid;
+  gap: var(--lt-space-2);
+  padding: 0;
+  list-style: none;
+  counter-reset: lt-order;
+}
+.lt-ready .lt-order-item {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--lt-space-1) var(--lt-space-3);
+  min-height: 3.75rem;
+  margin: 0;
+  padding: var(--lt-space-2) var(--lt-space-2) var(--lt-space-2) var(--lt-space-4);
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  background: var(--lt-surface);
+  counter-increment: lt-order;
+}
+/* The place an item is in now. The list is an <ol>, so the same number is read out with it. */
+.lt-ready .lt-order-item::before {
+  content: counter(lt-order);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  font-weight: 650;
+  color: var(--lt-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.lt-order-item > .lt-mark {
+  grid-column: 2;
+}
+/* Judged, an item has a second line; its number stays level with the middle of both. */
+.lt-ready .lt-order-item[data-state]::before {
+  grid-row: span 2;
+}
+.lt-order-moves {
+  display: flex;
+  gap: var(--lt-space-1);
+}
+.lt-move {
+  width: 2.75rem;
+  padding: 0;
+}
+/* In a narrow column the buttons go under the text, which then keeps the full width. */
+@media (max-width: 30rem) {
+  .lt-ready .lt-order-item {
+    grid-template-columns: 1.5rem minmax(0, 1fr);
+    padding: var(--lt-space-3) var(--lt-space-3) var(--lt-space-2) var(--lt-space-3);
+  }
+  .lt-order-moves {
+    grid-column: 2;
+  }
+}
+
+/* ----- a number */
+.lt-numeric {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lt-space-2) var(--lt-space-3);
+  font-family: var(--lt-font-ui);
+  font-size: 1rem;
+}
+.lt-number {
+  flex: 0 1 12rem;
+  width: 12rem;
+  min-width: 6rem;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.lt-unit-lead {
+  color: var(--lt-ink-2);
+}
+.lt-ready .lt-unit-lead {
+  display: none;
+}
+.lt-numeric[data-state="right"] .lt-number {
+  border-color: var(--lt-good);
+  box-shadow: inset 0 0 0 1px var(--lt-good);
+}
+.lt-numeric[data-state="wrong"] .lt-number {
+  border-style: dashed;
+  border-color: var(--lt-bad);
+}
+.lt-number[aria-invalid="true"] {
+  border-style: dashed;
+  border-color: var(--lt-warn);
+}
+
+/* ----- reflect */
+.lt-reflect-write > * + * {
+  margin-top: var(--lt-space-2);
+}
+.lt-reflect-text {
+  display: block;
+  min-height: 7.5rem;
+  font-family: var(--lt-font-prose);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+.lt-lookfor {
+  padding-left: 1.2em;
+}
+.lt-lookfor li + li {
+  margin-top: var(--lt-space-2);
+}
+.lt-ready .lt-lookfor {
+  padding: 0;
+  list-style: none;
+}
+.lt-look {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--lt-space-3);
+}
+.lt-ready .lt-look {
+  /* Tall enough to hit without aiming at the box. */
+  min-height: var(--lt-target);
+  cursor: pointer;
+}
+.lt-question > .lt-rate {
+  margin-top: var(--lt-space-5);
+}
+.lt-rate > legend {
+  margin-bottom: var(--lt-space-3);
+}
+.lt-rate-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lt-space-2);
+}
+.lt-rate-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--lt-space-2);
+  min-height: 2.75rem;
+  padding: 0 var(--lt-space-4) 0 var(--lt-space-3);
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  background: var(--lt-surface);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  font-weight: 600;
+  cursor: pointer;
+}
+.lt-rate-option input {
+  margin: 0;
+}
+.lt-rate-option:hover {
+  border-color: var(--lt-ink);
+}
+.lt-rate-kept {
+  margin-top: var(--lt-space-3);
+}
+/* The filled radio already shows the choice. Where the browser can, the whole pill does too. */
+@supports selector(:has(a)) {
+  .lt-rate-option:has(input:checked) {
+    border-color: var(--lt-accent);
+    box-shadow: inset 0 0 0 1px var(--lt-accent);
+    background: var(--lt-accent-soft);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lt-option,
+  .lt-rate-option,
+  .lt-order-item {
+    transition:
+      background-color var(--lt-speed) ease,
+      border-color var(--lt-speed) ease;
+  }
+}
+
+/* Fills are gone, so a choice and a verdict are drawn with lines. */
+@media (forced-colors: active) {
+  .lt-option[data-picked="true"],
+  .lt-ready .lt-option[data-state="right"],
+  .lt-steps-ready .lt-option[data-state="right"],
+  .lt-ready .lt-order-item[data-state="right"],
+  .lt-numeric[data-state="right"] .lt-number {
+    border-width: 3px;
+  }
+  .lt-option[data-picked="true"] {
+    border-color: Highlight;
+  }
+}
+
+/*
+ * On paper a question is the question and then its answer: the controls go, and what the player
+ * was holding back is printed.
+ */
+@media print {
+  .lt-actions,
+  .lt-order-moves,
+  .lt-order-how,
+  .lt-earlier,
+  .lt-reflect-write,
+  .lt-rate {
+    display: none !important;
+  }
+  .lt-answer[hidden],
+  .lt-explain[hidden],
+  .lt-solution[hidden] {
+    display: block !important;
+  }
+}

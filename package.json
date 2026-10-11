@@ -1,0 +1,37 @@
+{
+  "name": "learning-tool",
+  "version": "0.3.0",
+  "description": "An agent-native way to learn anything: a skill, a local MCP server, and a self-contained interactive lesson player.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json && tsc -p src/player/tsconfig.json",
+    "test": "npm run build && vitest run",
+    "test:player": "npm run build && playwright test",
+    "check": "npm run typecheck && npm test && playwright test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.3.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@modelcontextprotocol/client": "^2.3.1",
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^26.6.5",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  },
+  "author": "Austin Crane",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/parodyband/learning-tool.git"
+  }
+}

@@ -1,0 +1,138 @@
+/*
+ * Design tokens. Every colour, size and space in the player comes from here; figures, questions
+ * and steps use these and add none of their own.
+ *
+ * Colour is one accent on warm paper. Each colour is a light-dark() pair, so the page follows the
+ * system theme, and the learner's override is one attribute on the root (set by the player):
+ * data-theme="light" or "dark" only changes color-scheme, and every token follows.
+ *
+ * Contrast is checked by test/render/tokens.test.ts: text tokens reach 4.5:1 on every surface they
+ * are used on, and tokens that draw borders, connectors and focus rings reach 3:1.
+ */
+:root {
+  color-scheme: light dark;
+
+  /* Surfaces */
+  --lt-bg: light-dark(#fbfaf7, #151412);
+  --lt-surface: light-dark(#ffffff, #1f1e1b);
+  --lt-sunken: light-dark(#f3f1ea, #0e0d0c);
+
+  /* Text: primary, secondary, tertiary. All three are body-text safe on every surface. */
+  --lt-ink: light-dark(#1c1b18, #ece8e0);
+  --lt-ink-2: light-dark(#4c4942, #c0bbb0);
+  --lt-ink-3: light-dark(#66625a, #a09b8f);
+
+  /* Lines: a hairline for decoration, and a stronger one wherever the line carries meaning. */
+  --lt-line: light-dark(#e2ded4, #32302b);
+  --lt-line-strong: light-dark(#878275, #807b70);
+
+  /* The one accent: links, the primary button, the current place, focus. */
+  --lt-accent: light-dark(#2b3c9d, #aab5ff);
+  --lt-accent-ink: light-dark(#ffffff, #12142e);
+  --lt-accent-soft: light-dark(#eceefa, #23264a);
+
+  /* States. Never the only cue: pair each with a word, a mark or a border. */
+  --lt-good: light-dark(#17663a, #86d6a3);
+  --lt-good-soft: light-dark(#e3f2e9, #16311f);
+  --lt-bad: light-dark(#a12a22, #ffa198);
+  --lt-bad-soft: light-dark(#fbe9e7, #3b1a17);
+  --lt-warn: light-dark(#7a5200, #f2c56b);
+  --lt-warn-soft: light-dark(#fbf0d6, #362a0b);
+  /* Behind text that is being pointed at: a highlighted figure part, a changed value. */
+  --lt-mark: light-dark(#fdf0b8, #4a3f12);
+
+  --lt-shadow: 0 1px 2px light-dark(rgb(28 27 24 / 0.08), rgb(0 0 0 / 0.5)), 0 12px 32px light-dark(rgb(28 27 24 / 0.14), rgb(0 0 0 / 0.6));
+  --lt-backdrop: light-dark(rgb(28 27 24 / 0.4), rgb(0 0 0 / 0.6));
+
+  /* Type. Prose is set in a book face; everything you operate is set in the interface face. */
+  --lt-font-prose: Charter, "Bitstream Charter", "Sitka Text", Cambria, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --lt-font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif;
+  --lt-font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  --lt-size-body: clamp(1.0625rem, 1rem + 0.35vw, 1.125rem);
+  --lt-size-lede: clamp(1.1875rem, 1.1rem + 0.6vw, 1.375rem);
+  --lt-size-s: 0.9375rem;
+  --lt-size-xs: 0.8125rem;
+  --lt-size-h1: clamp(1.875rem, 1.4rem + 2.1vw, 2.625rem);
+  --lt-size-h2: clamp(1.5rem, 1.25rem + 1.3vw, 2.0625rem);
+  --lt-size-h3: 1.1875rem;
+  --lt-leading: 1.6;
+  --lt-leading-tight: 1.18;
+  /* Small capitals for labels and kickers. */
+  --lt-tracking-caps: 0.085em;
+
+  /* Space, on a 4px grid. */
+  --lt-space-1: 0.25rem;
+  --lt-space-2: 0.5rem;
+  --lt-space-3: 0.75rem;
+  --lt-space-4: 1rem;
+  --lt-space-5: 1.5rem;
+  --lt-space-6: 2rem;
+  --lt-space-7: 3rem;
+  --lt-space-8: 4.5rem;
+
+  /* Layout: the reading column (about 66 characters of prose) and the widest a scene with a figure grows. */
+  --lt-measure: 35rem;
+  --lt-wide: 70rem;
+  --lt-gutter: clamp(1rem, 4vw, 2.5rem);
+
+  --lt-radius: 6px;
+  --lt-radius-s: 4px;
+  /* The smallest thing a pointer is asked to hit (WCAG 2.5.8). */
+  --lt-target: 1.5rem;
+  --lt-focus: 2px solid var(--lt-accent);
+  --lt-speed: 160ms;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --lt-bg: light-dark(#ffffff, #000000);
+    --lt-surface: light-dark(#ffffff, #000000);
+    --lt-sunken: light-dark(#ffffff, #000000);
+    --lt-ink: light-dark(#000000, #ffffff);
+    --lt-ink-2: light-dark(#000000, #ffffff);
+    --lt-ink-3: light-dark(#1f1f1f, #e6e6e6);
+    --lt-line: light-dark(#5a5a5a, #a8a8a8);
+    --lt-line-strong: light-dark(#000000, #ffffff);
+    --lt-accent: light-dark(#1a2a8a, #c3cbff);
+    --lt-accent-soft: light-dark(#ffffff, #000000);
+    --lt-good-soft: light-dark(#ffffff, #000000);
+    --lt-bad-soft: light-dark(#ffffff, #000000);
+    --lt-warn-soft: light-dark(#ffffff, #000000);
+    --lt-good: light-dark(#0c4d28, #a4e8bd);
+    --lt-bad: light-dark(#7d1a14, #ffc0ba);
+    --lt-warn: light-dark(#573a00, #ffd98a);
+  }
+}
+
+@media (forced-colors: active) {
+  :root {
+    --lt-bg: Canvas;
+    --lt-surface: Canvas;
+    --lt-sunken: Canvas;
+    --lt-ink: CanvasText;
+    --lt-ink-2: CanvasText;
+    --lt-ink-3: CanvasText;
+    --lt-line: CanvasText;
+    --lt-line-strong: CanvasText;
+    --lt-accent: LinkText;
+    --lt-accent-ink: Canvas;
+    --lt-accent-soft: Canvas;
+    --lt-good: CanvasText;
+    --lt-bad: CanvasText;
+    --lt-warn: CanvasText;
+    --lt-good-soft: Canvas;
+    --lt-bad-soft: Canvas;
+    --lt-warn-soft: Canvas;
+    --lt-mark: Canvas;
+    --lt-shadow: none;
+    --lt-focus: 2px solid Highlight;
+  }
+}

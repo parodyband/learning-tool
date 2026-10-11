@@ -1,0 +1,41 @@
+/* The frame specs' page: the player's real tokens, base, frame and print styles, and a little page around them. */
+@import "../../src/player/css/tokens.css";
+@import "../../src/player/css/base.css";
+@import "../../src/player/css/frame.css";
+@import "../../src/player/css/print.css";
+
+main {
+  max-width: var(--lt-wide);
+  margin: 0 auto;
+  padding: var(--lt-space-4) var(--lt-gutter) var(--lt-space-8);
+}
+h1 {
+  font-size: var(--lt-size-h2);
+}
+h2 {
+  margin: var(--lt-space-6) 0 var(--lt-space-3);
+  font-size: var(--lt-size-h3);
+}
+.h-caption {
+  min-height: 3.2em;
+  margin-top: var(--lt-space-2);
+}
+.h-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lt-space-2);
+  margin-top: var(--lt-space-2);
+}
+/* A stand-in for a clip engine's stage element: a box of its own shape, hidden from assistive technology. */
+.h-stage {
+  position: relative;
+  height: 320px;
+  margin-bottom: var(--lt-space-2);
+  border-radius: var(--lt-radius);
+  background: var(--lt-sunken);
+}
+@media print {
+  .h-controls {
+    display: none;
+  }
+}

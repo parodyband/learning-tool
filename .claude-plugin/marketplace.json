@@ -1,0 +1,15 @@
+{
+  "name": "learning-tool",
+  "description": "Learning Tool: your own agent builds you a short, cited, interactive lesson on anything.",
+  "owner": {
+    "name": "Austin Crane"
+  },
+  "plugins": [
+    {
+      "name": "learning-tool",
+      "source": "./plugin",
+      "description": "A lesson-design skill plus a local MCP server that stores source excerpts, validates typed scenes and publishes a self-contained interactive lesson page.",
+      "category": "learning"
+    }
+  ]
+}

@@ -1,0 +1,1014 @@
+/*
+ * Shell: the page around the scenes.
+ *
+ * Three root classes, all set by the player, change the layout:
+ *   .lt-js       the script is running: one scene is shown at a time
+ *   .lt-compact  the scene on show is not the first: the title block shrinks to a running head
+ *   .lt-wide     the scene on show has a figure beside its text: everything aligns to the wide frame
+ * With none of them (no script, or the script failed) the page is one linear document.
+ */
+
+/* ----- skip link */
+.lt-skip {
+  position: absolute;
+  top: var(--lt-space-2);
+  left: var(--lt-space-2);
+  z-index: 2;
+  padding: var(--lt-space-2) var(--lt-space-4);
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  background: var(--lt-surface);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  font-weight: 600;
+  transform: translateY(-200%);
+}
+.lt-skip:focus {
+  transform: none;
+}
+
+/* ----- header: brand and tools on one line, then the title block */
+.lt-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--lt-space-4);
+  max-width: var(--lt-wide);
+  margin-inline: auto;
+  padding: var(--lt-space-3) var(--lt-gutter) 0;
+}
+.lt-brand {
+  grid-area: 1 / 1;
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-xs);
+  font-weight: 650;
+  letter-spacing: var(--lt-tracking-caps);
+  text-transform: uppercase;
+  color: var(--lt-ink-3);
+}
+.lt-tools {
+  grid-area: 1 / 2;
+  display: flex;
+  align-items: center;
+  gap: var(--lt-space-1);
+  margin-right: calc(-1 * var(--lt-space-3));
+}
+.lt-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--lt-space-2);
+  min-height: 2.5rem;
+  padding: var(--lt-space-2) var(--lt-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--lt-radius);
+  background: none;
+  color: var(--lt-ink-2);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  font-weight: 550;
+  line-height: 1;
+  cursor: pointer;
+}
+.lt-tool:hover {
+  background: var(--lt-sunken);
+  color: var(--lt-ink);
+}
+.lt-tool-count {
+  min-width: 1.35rem;
+  padding: 0.15rem 0.35rem;
+  border: 1px solid var(--lt-line-strong);
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 650;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The title block sits on the reading column, like a title page. */
+.lt-title,
+.lt-meta,
+.lt-objectives,
+.lt-resume {
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: 100%;
+  max-width: var(--lt-measure);
+}
+.lt-top-wide > .lt-title,
+.lt-top-wide > .lt-meta,
+.lt-top-wide > .lt-objectives,
+.lt-top-wide > .lt-resume {
+  justify-self: start;
+  max-width: 44rem;
+}
+.lt-title {
+  margin-top: var(--lt-space-7);
+  font-size: var(--lt-size-h1);
+  letter-spacing: -0.018em;
+}
+.lt-meta {
+  margin-top: var(--lt-space-4);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  color: var(--lt-ink-2);
+}
+.lt-objectives {
+  margin-top: var(--lt-space-5);
+  padding-top: var(--lt-space-5);
+  border-top: 1px solid var(--lt-line);
+}
+.lt-objectives ol {
+  margin-top: var(--lt-space-3);
+  padding: 0;
+  list-style: none;
+  counter-reset: lt-goal;
+}
+.lt-objectives li {
+  position: relative;
+  padding-left: 1.75em;
+  counter-increment: lt-goal;
+}
+.lt-objectives li + li {
+  margin-top: var(--lt-space-2);
+}
+.lt-objectives li::before {
+  content: counter(lt-goal);
+  position: absolute;
+  left: 0;
+  top: 0.32em;
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  font-weight: 650;
+  line-height: 1.4;
+  color: var(--lt-accent);
+  font-variant-numeric: tabular-nums;
+}
+.lt-resume {
+  margin-top: var(--lt-space-5);
+  padding: var(--lt-space-3) var(--lt-space-4);
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  background: var(--lt-surface);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+}
+
+/* Past the first scene the title becomes a running head on the tools line. */
+.lt-compact .lt-brand,
+.lt-compact .lt-meta,
+.lt-compact .lt-objectives,
+.lt-compact .lt-resume {
+  display: none;
+}
+.lt-compact .lt-title {
+  grid-area: 1 / 1;
+  justify-self: start;
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  font-weight: 550;
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: var(--lt-ink-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-wrap: nowrap;
+}
+
+/* On a phone there is no room for a brand or a running head beside the tools. The title is still the page's h1. */
+@media (max-width: 30rem) {
+  .lt-brand {
+    display: none;
+  }
+  .lt-tools {
+    grid-column: 1 / -1;
+    margin-inline: calc(-1 * var(--lt-space-3));
+  }
+  .lt-tools > :last-child {
+    margin-left: auto;
+  }
+  .lt-compact .lt-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}
+
+/* ----- contents: a popover under the tools */
+.lt-contents {
+  position: fixed;
+  inset: auto;
+  top: 3.5rem;
+  right: max(var(--lt-space-3), calc((100vw - var(--lt-wide)) / 2 + var(--lt-gutter) - var(--lt-space-3)));
+  width: min(24rem, calc(100vw - 2 * var(--lt-space-3)));
+  max-height: calc(100vh - 5rem);
+  margin: 0;
+  padding: var(--lt-space-2);
+  overflow: auto;
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  background: var(--lt-surface);
+  color: var(--lt-ink);
+  box-shadow: var(--lt-shadow);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.35;
+}
+.lt-contents ol {
+  padding: 0;
+  list-style: none;
+  counter-reset: lt-scene;
+}
+.lt-contents li {
+  counter-increment: lt-scene;
+}
+.lt-contents a {
+  display: grid;
+  grid-template-columns: 1.6rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: var(--lt-space-2);
+  padding: 0.55rem var(--lt-space-3);
+  border-radius: var(--lt-radius-s);
+  color: var(--lt-ink);
+  text-decoration: none;
+}
+.lt-contents a::before {
+  content: counter(lt-scene);
+  color: var(--lt-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.lt-contents a:hover {
+  background: var(--lt-sunken);
+}
+.lt-contents a[aria-current] {
+  background: var(--lt-accent-soft);
+  font-weight: 650;
+}
+.lt-contents-title {
+  grid-column: 2;
+}
+.lt-contents-kind {
+  grid-column: 3;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--lt-ink-3);
+}
+.lt-no-popover .lt-contents {
+  position: static;
+  width: auto;
+  max-width: var(--lt-measure);
+  margin: var(--lt-space-4) auto;
+  box-shadow: none;
+}
+
+/* ----- progress rail: one segment per scene. Decoration; the scene heading says "Scene 2 of 9". */
+.lt-rail {
+  display: none;
+  gap: 3px;
+  max-width: var(--lt-wide);
+  margin: var(--lt-space-3) auto 0;
+  padding: 0 var(--lt-gutter);
+  list-style: none;
+}
+.lt-js .lt-rail {
+  display: flex;
+}
+.lt-rail li {
+  flex: 1 1 0;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--lt-line);
+}
+.lt-rail .lt-rail-seen {
+  background: var(--lt-ink-3);
+}
+.lt-rail .lt-rail-current {
+  background: var(--lt-accent);
+}
+/* On the title page the rail is the rule between the title block and the first scene. */
+.lt-js:not(.lt-compact) .lt-rail {
+  margin-top: var(--lt-space-7);
+}
+
+/* ----- narration controls */
+.lt-audio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lt-space-2) var(--lt-space-4);
+  margin: var(--lt-space-5) auto 0;
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+}
+.lt-audio-play {
+  min-height: 2.5rem;
+  padding-block: 0.4rem;
+}
+.lt-icon-pause,
+.lt-playing .lt-icon-play {
+  display: none;
+}
+.lt-playing .lt-icon-pause {
+  display: block;
+}
+.lt-speed {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  overflow: hidden;
+}
+.lt-speed-option {
+  position: relative;
+  display: flex;
+}
+.lt-speed-option + .lt-speed-option {
+  border-left: 1px solid var(--lt-line);
+}
+.lt-speed-option input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.lt-speed-option span {
+  display: flex;
+  align-items: center;
+  min-width: 2.75rem;
+  min-height: 2.375rem;
+  padding: 0 var(--lt-space-2);
+  justify-content: center;
+  color: var(--lt-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.lt-speed-option input:checked + span {
+  background: var(--lt-accent-soft);
+  color: var(--lt-ink);
+  font-weight: 650;
+  /* The chosen speed is also underlined, so it does not depend on the tint. */
+  box-shadow: inset 0 -2px 0 var(--lt-accent);
+}
+.lt-speed-option input:focus-visible + span {
+  outline: var(--lt-focus);
+  outline-offset: -3px;
+}
+.lt-audio-note {
+  flex: 1 1 16rem;
+  font-size: var(--lt-size-xs);
+  color: var(--lt-ink-3);
+}
+
+/* ----- scenes */
+main {
+  display: block;
+  max-width: var(--lt-wide);
+  margin-inline: auto;
+  padding-inline: var(--lt-gutter);
+}
+.lt-scene,
+.lt-audio,
+.lt-pager,
+.lt-foot {
+  width: 100%;
+  max-width: var(--lt-measure);
+}
+.lt-foot {
+  /* The footer sits outside <main>, so it carries the gutter itself. */
+  max-width: calc(var(--lt-measure) + 2 * var(--lt-gutter));
+}
+.lt-scene {
+  margin-inline: auto;
+  padding-top: var(--lt-space-7);
+}
+.lt-scene.lt-scene-wide,
+.lt-wide .lt-audio,
+.lt-wide .lt-pager {
+  max-width: none;
+}
+.lt-wide .lt-foot {
+  max-width: var(--lt-wide);
+}
+/* With every scene on the page at once, a rule separates them. */
+:root:not(.lt-js) .lt-scene + .lt-scene {
+  margin-top: var(--lt-space-7);
+  border-top: 1px solid var(--lt-line);
+}
+
+.lt-scene-head h2 {
+  font-size: var(--lt-size-h2);
+}
+.lt-kicker {
+  display: block;
+  margin-bottom: var(--lt-space-3);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-xs);
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: var(--lt-tracking-caps);
+  text-transform: uppercase;
+  color: var(--lt-accent);
+}
+.lt-kicker-kind {
+  color: var(--lt-ink-2);
+}
+.lt-scene-title {
+  display: block;
+}
+.lt-scene-body {
+  margin-top: var(--lt-space-5);
+}
+
+/* Text beside a figure. One column until there is room for both at a readable width. */
+.lt-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "intro" "figure" "text";
+  row-gap: var(--lt-space-6);
+}
+.lt-split > .lt-intro {
+  grid-area: intro;
+}
+.lt-split > .lt-text-col {
+  grid-area: text;
+  min-width: 0;
+}
+.lt-split > .lt-figure-col {
+  grid-area: figure;
+  min-width: 0;
+}
+/* A narration scene reads text first, then the figure it introduces. */
+.lt-split:not(.lt-split-steps) {
+  grid-template-areas: "text" "figure";
+}
+.lt-intro {
+  max-width: var(--lt-measure);
+  font-size: var(--lt-size-lede);
+  line-height: 1.45;
+  color: var(--lt-ink-2);
+}
+@media (min-width: 62rem) {
+  .lt-split,
+  .lt-split:not(.lt-split-steps) {
+    grid-template-columns: minmax(0, 29rem) minmax(0, 1fr);
+    grid-template-areas: "intro intro" "text figure";
+    column-gap: var(--lt-space-7);
+    row-gap: 0;
+    align-items: start;
+  }
+  .lt-split > .lt-intro {
+    margin-bottom: var(--lt-space-6);
+  }
+  /* The figure stays in view while the steps beside it change. */
+  .lt-js .lt-split-steps > .lt-figure-col {
+    position: sticky;
+    top: var(--lt-space-5);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lt-js .lt-scene {
+    animation: lt-arrive 220ms ease-out;
+  }
+  @keyframes lt-arrive {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+}
+
+/* ----- narration: the segment being read */
+.lt-reading {
+  margin-inline-start: calc(-1 * var(--lt-space-3) - 3px);
+  padding-inline-start: var(--lt-space-3);
+  border-inline-start: 3px solid var(--lt-accent);
+}
+
+/* ----- pager */
+.lt-pager {
+  display: flex;
+  align-items: center;
+  gap: var(--lt-space-4);
+  margin: var(--lt-space-7) auto 0;
+  padding-top: var(--lt-space-5);
+  border-top: 1px solid var(--lt-line);
+}
+.lt-pager-next {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  color: var(--lt-ink-2);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 30rem) {
+  .lt-pager {
+    flex-wrap: wrap;
+  }
+  .lt-pager-next {
+    order: -1;
+    flex-basis: 100%;
+    text-align: left;
+    white-space: normal;
+  }
+  .lt-pager .lt-btn {
+    flex: 1 1 0;
+  }
+}
+
+/* ----- footer */
+.lt-foot {
+  margin: var(--lt-space-7) auto 0;
+  padding: var(--lt-space-5) var(--lt-gutter) var(--lt-space-7);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-xs);
+  line-height: 1.55;
+  color: var(--lt-ink-3);
+}
+.lt-foot-progress {
+  margin-top: var(--lt-space-4);
+}
+.lt-foot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lt-space-2) var(--lt-space-3);
+  margin-top: var(--lt-space-2);
+}
+.lt-foot .lt-btn {
+  min-height: 2.25rem;
+  padding: 0.3rem 0.75rem;
+  font-size: var(--lt-size-xs);
+}
+.lt-clear-confirm {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lt-space-2);
+  color: var(--lt-ink);
+}
+
+/* ----- source chips */
+.lt-cites {
+  white-space: nowrap;
+}
+.lt-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--lt-target);
+  height: var(--lt-target);
+  margin: 0;
+  padding: 0 0.3rem;
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius-s);
+  background: var(--lt-surface);
+  color: var(--lt-ink-2);
+  font-family: var(--lt-font-ui);
+  font-size: 0.75rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums lining-nums;
+  line-height: 1;
+  vertical-align: 0.12em;
+  cursor: pointer;
+}
+.lt-chip + .lt-chip {
+  margin-left: 3px;
+}
+.lt-chip:hover,
+.lt-chip-open {
+  border-color: var(--lt-accent);
+  color: var(--lt-accent);
+}
+/* Open is shown by weight as well as colour. */
+.lt-chip-open {
+  box-shadow: inset 0 0 0 1px var(--lt-accent);
+  background: var(--lt-accent-soft);
+}
+
+/* ----- source card: the popover a chip opens, and one entry in the sources list */
+/* The attribute in the selector keeps a "space between siblings" rule elsewhere from giving the card a margin. */
+[popover].lt-source {
+  margin: 0;
+}
+.lt-source {
+  position: absolute;
+  inset: auto;
+  width: min(27rem, calc(100vw - 1.5rem));
+  max-height: min(36rem, calc(100vh - 1.5rem));
+  margin: 0;
+  padding: var(--lt-space-5);
+  overflow: auto;
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  background: var(--lt-surface);
+  color: var(--lt-ink);
+  box-shadow: var(--lt-shadow);
+}
+/* Without the script nothing places the card, so it keeps the browser's centred position. */
+:root:not(.lt-js) .lt-source {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+}
+/* Shown only once it has been put next to its chip. */
+.lt-js .lt-source:not(.lt-placed) {
+  opacity: 0;
+}
+.lt-no-popover .lt-source {
+  position: static;
+  width: auto;
+  max-height: none;
+  margin-top: var(--lt-space-3);
+  opacity: 1;
+  box-shadow: none;
+}
+.lt-source,
+.lt-source-item {
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.5;
+}
+.lt-source-kicker {
+  font-size: var(--lt-size-xs);
+  font-weight: 650;
+  letter-spacing: var(--lt-tracking-caps);
+  text-transform: uppercase;
+  color: var(--lt-ink-3);
+}
+.lt-source-host {
+  margin-top: var(--lt-space-1);
+  font-family: var(--lt-font-ui);
+  font-size: 1.3125rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+/* The two lines nothing has checked, under a line that says whose words they are. */
+.lt-source-given {
+  margin-top: var(--lt-space-3);
+  font-size: var(--lt-size-xs);
+  color: var(--lt-ink-3);
+}
+.lt-source-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.lt-source-pub {
+  color: var(--lt-ink-2);
+}
+.lt-source-saved {
+  margin-top: var(--lt-space-3);
+  font-size: var(--lt-size-xs);
+  color: var(--lt-ink-3);
+}
+.lt-source-excerpt {
+  margin-top: var(--lt-space-2);
+  padding: var(--lt-space-3) var(--lt-space-4);
+  border-left: 3px solid var(--lt-line-strong);
+  background: var(--lt-sunken);
+  font-family: var(--lt-font-prose);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+/* A plain statement, not an alarm: the claim may be fine, the learner is only told to look. */
+.lt-source-weak {
+  margin-top: var(--lt-space-3);
+  padding: var(--lt-space-2) var(--lt-space-3);
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius-s);
+  font-weight: 550;
+}
+.lt-source-open {
+  margin-top: var(--lt-space-4);
+  font-weight: 600;
+}
+.lt-source-url {
+  margin-top: var(--lt-space-1);
+  font-family: var(--lt-font-mono);
+  font-size: 0.75rem;
+  color: var(--lt-ink-3);
+  overflow-wrap: anywhere;
+}
+.lt-source-actions {
+  margin-top: var(--lt-space-4);
+  text-align: right;
+}
+.lt-source-actions .lt-btn {
+  min-height: 2.25rem;
+  padding-block: 0.3rem;
+}
+
+/* ----- sources dialog */
+.lt-sources {
+  width: min(46rem, calc(100vw - 1.5rem));
+  max-width: none;
+  max-height: calc(100vh - 1.5rem);
+  padding: 0;
+  border: 1px solid var(--lt-line-strong);
+  border-radius: 10px;
+  background: var(--lt-surface);
+  color: var(--lt-ink);
+  box-shadow: var(--lt-shadow);
+}
+.lt-sources::backdrop {
+  background: var(--lt-backdrop);
+}
+.lt-sources-inner {
+  padding: 0 var(--lt-space-6) var(--lt-space-6);
+}
+.lt-sources-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lt-space-4);
+  margin-inline: calc(-1 * var(--lt-space-6));
+  padding: var(--lt-space-4) var(--lt-space-6);
+  border-bottom: 1px solid var(--lt-line);
+  background: var(--lt-surface);
+}
+.lt-sources-head h2 {
+  font-size: 1.5rem;
+}
+.lt-sources-close .lt-btn {
+  min-height: 2.25rem;
+  padding-block: 0.3rem;
+}
+.lt-sources-limit {
+  margin-top: var(--lt-space-5);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.55;
+  color: var(--lt-ink-2);
+}
+.lt-source-list {
+  margin-top: var(--lt-space-5);
+  padding: 0;
+  list-style: none;
+}
+.lt-source-item {
+  padding-block: var(--lt-space-5);
+  border-top: 1px solid var(--lt-line);
+}
+.lt-receipt {
+  margin-top: var(--lt-space-2);
+  padding-top: var(--lt-space-5);
+  border-top: 1px solid var(--lt-line-strong);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.5;
+}
+.lt-receipt h3 {
+  font-family: var(--lt-font-ui);
+  font-size: 1.0625rem;
+}
+.lt-receipt-list {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) minmax(0, 1fr);
+  gap: var(--lt-space-2) var(--lt-space-5);
+  margin-top: var(--lt-space-3);
+}
+.lt-receipt-list dt {
+  color: var(--lt-ink-2);
+}
+.lt-receipt-list dd {
+  margin: 0;
+}
+.lt-receipt-warnings {
+  padding: 0;
+  list-style: none;
+}
+.lt-hash {
+  font-size: 0.75rem;
+}
+@media (max-width: 30rem) {
+  .lt-sources-inner {
+    padding-inline: var(--lt-space-4);
+  }
+  .lt-sources-head {
+    margin-inline: calc(-1 * var(--lt-space-4));
+    padding-inline: var(--lt-space-4);
+  }
+  .lt-receipt-list {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0;
+  }
+  .lt-receipt-list dd {
+    margin-bottom: var(--lt-space-3);
+  }
+}
+/* With no script, or no <dialog>, the list is the last section of the document. */
+:root:not(.lt-js) .lt-sources,
+.lt-no-dialog .lt-sources {
+  position: static;
+  display: block;
+  width: auto;
+  max-width: calc(var(--lt-measure) + 2 * var(--lt-gutter));
+  max-height: none;
+  margin: var(--lt-space-7) auto 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+:root:not(.lt-js) .lt-sources-inner,
+.lt-no-dialog .lt-sources-inner {
+  padding-inline: var(--lt-gutter);
+}
+:root:not(.lt-js) .lt-sources-head,
+.lt-no-dialog .lt-sources-head {
+  position: static;
+  margin-inline: 0;
+  padding-inline: 0;
+  background: none;
+}
+:root:not(.lt-js) .lt-sources-close,
+.lt-no-dialog .lt-sources-close {
+  display: none;
+}
+
+/* ----- recap */
+.lt-takeaways {
+  padding: 0;
+  list-style: none;
+}
+.lt-takeaway + .lt-takeaway {
+  margin-top: var(--lt-space-6);
+}
+.lt-recap-q {
+  font-size: var(--lt-size-lede);
+  line-height: 1.4;
+}
+.lt-takeaway .lt-reveal {
+  margin-top: var(--lt-space-3);
+}
+.lt-recap-checks {
+  margin-top: var(--lt-space-3);
+  padding: 0;
+  list-style: none;
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+}
+.lt-recap-checks li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--lt-space-4);
+  padding-block: var(--lt-space-1);
+}
+.lt-recap-checks a {
+  /* Tall enough to hit even when the title is one short word. */
+  display: inline-block;
+  min-height: var(--lt-target);
+}
+.lt-result {
+  color: var(--lt-ink-2);
+}
+@media (max-width: 30rem) {
+  /* One above the other every time, instead of whichever happens to fit. */
+  .lt-recap-checks li {
+    display: block;
+    padding-block: var(--lt-space-2);
+  }
+  .lt-result {
+    display: block;
+  }
+}
+.lt-result[data-state="correct"] {
+  color: var(--lt-good);
+  font-weight: 600;
+}
+.lt-result[data-state="incorrect"] {
+  color: var(--lt-bad);
+  font-weight: 600;
+}
+.lt-recap-part {
+  margin-top: var(--lt-space-7);
+  padding-top: var(--lt-space-5);
+  border-top: 1px solid var(--lt-line);
+}
+.lt-recap-part > * + * {
+  margin-top: var(--lt-space-3);
+}
+.lt-recap-part ul {
+  padding-left: 1.2em;
+}
+.lt-recap-part li + li {
+  margin-top: var(--lt-space-2);
+}
+.lt-next-how,
+.lt-summary p {
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  color: var(--lt-ink-2);
+}
+.lt-recap-part .lt-next-list {
+  padding: 0;
+  list-style: none;
+}
+.lt-next-list li + li {
+  margin-top: var(--lt-space-5);
+}
+.lt-request {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lt-space-2) var(--lt-space-3);
+}
+.lt-request-text {
+  flex: 1 1 14rem;
+  /* A flex item will not shrink below its longest word unless it is told it may, and a topic can be one long word. */
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: var(--lt-space-2) var(--lt-space-3);
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  background: var(--lt-surface);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  font-weight: 550;
+  -webkit-user-select: all;
+  user-select: all;
+}
+.lt-request .lt-btn {
+  min-height: 2.5rem;
+  padding-block: 0.35rem;
+}
+.lt-next-why {
+  margin-top: var(--lt-space-2);
+  font-size: 1rem;
+  color: var(--lt-ink-2);
+}
+.lt-summary-text {
+  display: block;
+  width: 100%;
+  padding: var(--lt-space-3) var(--lt-space-4);
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  background: var(--lt-sunken);
+  color: var(--lt-ink);
+  font-family: var(--lt-font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  resize: vertical;
+}
+.lt-copy.lt-copied::after {
+  content: "✓";
+}
+
+/* ----- forced colours: fills are gone, so anything that was only a fill gets a line */
+@media (forced-colors: active) {
+  .lt-rail li {
+    height: 0;
+    border-top: 3px solid GrayText;
+    background: none;
+  }
+  .lt-rail .lt-rail-seen {
+    border-top-color: CanvasText;
+  }
+  .lt-rail .lt-rail-current {
+    border-top-color: Highlight;
+  }
+  .lt-contents a[aria-current],
+  .lt-speed-option input:checked + span {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+  /*
+   * The primary button is a filled shape with its label knocked out of it. Left to the browser,
+   * Chromium paints a Canvas plate behind the label, and the label was Canvas too: a blank block.
+   * So the pair is chosen here and the browser is told to leave it alone. Highlight and
+   * HighlightText are the one system pair meant to be used as fill and text.
+   */
+  .lt-btn-primary {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background: Highlight;
+    color: HighlightText;
+  }
+  .lt-btn-primary:hover {
+    border-color: CanvasText;
+  }
+  .lt-btn-primary[aria-disabled="true"],
+  .lt-btn-primary:disabled {
+    border-color: GrayText;
+    background: Canvas;
+    color: GrayText;
+  }
+}

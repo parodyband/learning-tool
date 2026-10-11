@@ -1,0 +1,256 @@
+/*
+ * The custom frame: a stage whose picture is drawn by code the agent wrote (player/frame/).
+ * Uses only the tokens and the shared pieces. Markup is listed at the top of player/frame/index.ts.
+ *
+ * The box has its shape before any script runs: the aspect the author chose where there is room,
+ * and the tall stage (4:5) in a column narrower than 640px. The script reads the box and draws to
+ * it; it never sets a size. 640 is NARROW_BELOW in player/frame/shared.ts.
+ */
+.lt-frame {
+  container-type: inline-size;
+  min-width: 0;
+}
+
+.lt-frame-stage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  /* Never taller than the window leaves room for: the controls and the caption stay in view. */
+  max-width: min(100%, calc(78vh * 16 / 9));
+  margin-inline: auto;
+  border: 1px solid var(--lt-line);
+  border-radius: var(--lt-radius);
+  background: var(--lt-sunken);
+  overflow: hidden;
+}
+.lt-frame[data-aspect="4:3"] .lt-frame-stage {
+  aspect-ratio: 4 / 3;
+  max-width: min(100%, calc(78vh * 4 / 3));
+}
+.lt-frame[data-aspect="1:1"] .lt-frame-stage {
+  aspect-ratio: 1;
+  max-width: min(100%, 78vh);
+}
+@container (max-width: 639.98px) {
+  .lt-frame-stage,
+  .lt-frame[data-aspect] .lt-frame-stage {
+    aspect-ratio: 4 / 5;
+    max-width: min(100%, 540px, calc(86vh * 4 / 5));
+  }
+}
+
+.lt-frame-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * The description. With scripting off, before the first picture and when the animation has been
+ * turned off, it stands in the box where the picture would be. Once there is a picture it is
+ * marked hidden on screen (it still describes the canvas to a screen reader) and comes back on paper.
+ */
+.lt-frame-alt {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: safe center;
+  justify-content: center;
+  margin: 0;
+  padding: var(--lt-space-5);
+  overflow: auto;
+  color: var(--lt-ink-2);
+  font-family: var(--lt-font-prose);
+  font-size: var(--lt-size-s);
+  line-height: 1.5;
+  text-align: center;
+  text-wrap: balance;
+}
+/* While the worker starts, the box is quiet: the words would only flash. */
+.lt-frame[data-state="idle"] .lt-frame-alt {
+  visibility: hidden;
+}
+
+/*
+ * Inside a clip the picture stands on the clip's own stage (the engine's element, which is hidden
+ * from assistive technology as a whole), and this element keeps what a learner reads and operates:
+ * the sliders, the status line, "Try again" and the label. Its box is then no box: it holds only
+ * the description, which shows when the animation has been turned off and there is no picture.
+ */
+.lt-frame-picture {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+/*
+ * On a narrow stage the picture is as wide as the stage, and the clip's provenance badge sits in
+ * the stage's top corner: the picture starts below it, so the badge never covers what was drawn.
+ * (The clip engine's stage element is a size container.)
+ */
+@container (max-width: 519.98px) {
+  .lt-frame-picture {
+    top: 2.75rem;
+  }
+}
+.lt-frame-picture > .lt-frame-canvas {
+  /* Sized by the player to the largest picture of the stage's shape that fits. */
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--lt-radius-s);
+}
+.lt-frame[data-picture="away"] .lt-frame-stage {
+  aspect-ratio: auto;
+  max-width: none;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  overflow: visible;
+}
+.lt-frame[data-picture="away"] .lt-frame-alt {
+  position: static;
+  display: none;
+  padding: 0;
+  text-align: left;
+}
+.lt-frame[data-picture="away"][data-state="failed"] .lt-frame-alt {
+  display: block;
+  margin-top: var(--lt-space-3);
+}
+/*
+ * A static frame inside a clip (scripting off, or a clip that could not be built): the clip's own
+ * description is already on the page just above, so the placeholder would only repeat it.
+ */
+.lt-clip .lt-frame[data-state="static"] .lt-frame-stage {
+  display: none;
+}
+.lt-clip .lt-frame[data-state="static"] .lt-frame-label {
+  margin-top: 0;
+}
+
+.lt-frame-params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lt-space-2) var(--lt-space-6);
+  margin-top: var(--lt-space-3);
+}
+/* The name and the value on one line, the slider under them at full width: the same at any width. */
+.lt-frame-param {
+  display: grid;
+  flex: 1 1 14rem;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 0 var(--lt-space-3);
+  min-width: 0;
+  max-width: 28rem;
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.3;
+  color: var(--lt-ink);
+}
+.lt-frame-param-label {
+  font-weight: 600;
+}
+.lt-frame-param-value {
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--lt-ink-2);
+  font-variant-numeric: tabular-nums lining-nums;
+  text-align: right;
+}
+.lt-frame-range {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  /* The whole height is the target, not just the thumb. */
+  height: 2.5rem;
+  margin: 0;
+  accent-color: var(--lt-accent);
+  cursor: pointer;
+}
+
+/* Present and empty from the start, so that what it says later is announced. Empty, it takes no room. */
+.lt-frame-status {
+  margin: var(--lt-space-3) 0 0;
+  padding: var(--lt-space-3) var(--lt-space-4);
+  border: 1px solid var(--lt-bad);
+  border-left-width: 4px;
+  border-radius: var(--lt-radius-s);
+  background: var(--lt-bad-soft);
+  color: var(--lt-ink);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.5;
+}
+.lt-frame-status:empty {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.lt-frame-retry {
+  margin-top: var(--lt-space-3);
+}
+
+/* The line that says whose work the picture is. Always shown, never a tooltip. */
+.lt-frame-label {
+  margin: var(--lt-space-2) 0 0;
+  color: var(--lt-ink-3);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-xs);
+  line-height: 1.4;
+}
+
+@media (forced-colors: active) {
+  .lt-frame-stage {
+    border-color: CanvasText;
+  }
+}
+
+/*
+ * Paper: the picture as it stood (the canvas keeps its last frame), then the description in full.
+ * A frame that was never on screen has no picture, and prints its description in the box's place.
+ */
+@media print {
+  .lt-frame-params,
+  .lt-frame-retry,
+  .lt-frame-status {
+    display: none !important;
+  }
+  .lt-frame .lt-frame-stage,
+  .lt-frame[data-aspect] .lt-frame-stage {
+    max-width: 28rem;
+    margin-inline: 0;
+    aspect-ratio: auto;
+    border: 0;
+    background: none;
+    overflow: visible;
+    break-inside: avoid;
+  }
+  .lt-frame-stage > .lt-frame-canvas {
+    height: auto;
+    border: 0.5pt solid var(--lt-line-strong);
+  }
+  .lt-frame:not([data-picture="away"]) .lt-frame-alt,
+  .lt-frame:not([data-picture="away"]) .lt-frame-alt[hidden] {
+    position: static;
+    display: block !important;
+    visibility: visible;
+    padding: 6pt 0 0;
+    overflow: visible;
+    color: var(--lt-ink);
+    text-align: left;
+  }
+  /* On a clip's stage the picture prints at full strength, whatever the clip's controls had done to the stage. */
+  .lt-clip[data-stage="frame"] .st-view {
+    opacity: 1 !important;
+  }
+  /* Inside a clip the clip prints its own description; the frame adds only whose work the picture is. */
+  .lt-frame[data-picture="away"] .lt-frame-alt {
+    display: none !important;
+  }
+  .lt-frame-label {
+    color: var(--lt-ink);
+  }
+}

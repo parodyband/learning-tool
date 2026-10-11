@@ -1,0 +1,124 @@
+/*
+ * Stage tokens: every colour the clip stage adds to the shell's own (css/tokens.css).
+ *
+ * Inside the stage the band sets `color-scheme: dark`, so ink, the accent and the three outcome
+ * colours are the shell's dark palette in both page themes. What is declared here is the rest: the
+ * field the stage is, and the lights and shades laid on it. The field follows the page theme
+ * (indigo beside paper, blue-black beside the dark page); the lights and shades are the same on
+ * both. `.st-paper` is the same set for paper: print, and the stills made for it.
+ *
+ * css/stage.css, css/stage-kits-extra.css and css/frame.css draw with these and name no colour of
+ * their own.
+ */
+:root {
+  /* The field: the stage itself, its lit middle, the strip and controls under it, a raised surface on it. */
+  --st-field: #1b2163;
+  --st-field-lit: #2a3396;
+  --st-field-deep: #141949;
+  --st-surface: #2c3590;
+  /* Text on a solid tone (the accent, good, bad and warn fills). */
+  --st-on-solid: #11132c;
+  /* Quiet text on the field: axis labels, a read-out's name, a part set aside. Still 4.5:1 on the lit middle. */
+  --st-ink-quiet: #b9bce0;
+
+  /* Light on the field, weakest first. */
+  --st-wash: rgb(255 255 255 / 0.07);
+  --st-pane: rgb(255 255 255 / 0.085);
+  --st-rule: rgb(255 255 255 / 0.1);
+  --st-grain: rgb(255 255 255 / 0.12);
+  --st-pane-strong: rgb(255 255 255 / 0.13);
+  --st-pane-top: rgb(255 255 255 / 0.14);
+  --st-hair: rgb(255 255 255 / 0.2);
+  --st-pane-line: rgb(255 255 255 / 0.24);
+  --st-hair-strong: rgb(255 255 255 / 0.34);
+  --st-sheen: rgb(255 255 255 / 0.35);
+  --st-axis: rgb(255 255 255 / 0.55);
+  /* A part with no tone of its own, drawn solid: a neutral bar, a neutral line. */
+  --st-plain: #c5c9ea;
+  --st-dot: #7f86bd;
+  --st-dot-muted: #4d5391;
+
+  /* Shade on the field. */
+  --st-well: rgb(4 6 38 / 0.45);
+  --st-shade: rgb(4 6 38 / 0.52);
+  --st-shadow: 0 16px 36px rgb(4 6 38 / 0.5), 0 2px 6px rgb(4 6 38 / 0.35);
+
+  /* The accent, and the colour of something lost, as light. */
+  --st-accent-wash: rgb(170 181 255 / 0.1);
+  --st-halo: rgb(170 181 255 / 0.23);
+  --st-glow: rgb(170 181 255 / 0.4);
+  --st-halo-bad: rgb(255 161 152 / 0.24);
+  /* A goal reached, as light: the one ring that leaves it. */
+  --st-halo-good: rgb(134 214 163 / 0.3);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --st-field: #101127;
+    --st-field-lit: #1d2050;
+    --st-field-deep: #0a0b1b;
+    --st-surface: #20235a;
+    --st-dot: #6d74ab;
+    --st-dot-muted: #3d427a;
+  }
+}
+:root[data-theme="dark"] {
+  --st-field: #101127;
+  --st-field-lit: #1d2050;
+  --st-field-deep: #0a0b1b;
+  --st-surface: #20235a;
+  --st-dot: #6d74ab;
+  --st-dot-muted: #3d427a;
+}
+@media (prefers-contrast: more) {
+  :root {
+    --st-field: #000000;
+    --st-field-lit: #000000;
+    --st-field-deep: #000000;
+    --st-surface: #000000;
+    --st-pane: #000000;
+    --st-pane-strong: #000000;
+    --st-pane-line: #ffffff;
+    --st-ink-quiet: #ffffff;
+    --st-hair: rgb(255 255 255 / 0.6);
+    --st-hair-strong: #ffffff;
+    --st-rule: rgb(255 255 255 / 0.4);
+    --st-shadow: none;
+    --st-dot: #c9c9c9;
+    --st-dot-muted: #8a8a8a;
+  }
+}
+
+/* Paper: ink outlines instead of light and shadow. The shell's own tokens are light here. */
+.st-paper {
+  --st-field: #ffffff;
+  --st-field-lit: #ffffff;
+  --st-field-deep: #ffffff;
+  --st-surface: #ffffff;
+  --st-on-solid: #ffffff;
+  --st-ink-quiet: #66625a;
+  --st-wash: #ffffff;
+  --st-pane: #ffffff;
+  --st-pane-strong: #ffffff;
+  --st-pane-top: transparent;
+  --st-pane-line: #1c1b18;
+  --st-hair: #878275;
+  --st-hair-strong: #1c1b18;
+  --st-rule: #d9d6cd;
+  --st-grain: transparent;
+  --st-sheen: transparent;
+  --st-axis: #1c1b18;
+  --st-plain: #66625a;
+  --st-dot: #8d887b;
+  --st-dot-muted: #c9c5ba;
+  --st-well: #ffffff;
+  --st-shade: transparent;
+  --st-shadow: none;
+  --st-accent-wash: transparent;
+  --st-halo: transparent;
+  --st-glow: transparent;
+  --st-halo-bad: transparent;
+  --st-halo-good: transparent;
+  --lt-bg: #ffffff;
+  --lt-surface: #ffffff;
+  --lt-sunken: #ffffff;
+}

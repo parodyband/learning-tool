@@ -1,0 +1,2830 @@
+/*
+ * Clips: the stage, the caption strip under it, the controls, the title card, and the static
+ * account of a clip that the page carries (render/clip.ts). Engine: src/player/stage/.
+ *
+ * THE LOOK, in one paragraph. The stage is a screen: a deep field the width of the window, lit
+ * from its middle, with a quiet dot grid behind everything. Parts are panes that float over it
+ * with a soft shadow; a part that means something is a solid of one of four colours. Type on the
+ * stage is the interface face, heavy and tight; captions under it are the book face, so the
+ * caption reads as a voice and the stage as the thing. One accent, three outcome colours, nothing
+ * else. Nothing here moves by itself except the two entrances at the bottom of this file (the
+ * title card and the wipe a clip arrives behind): all other motion is the engine's, drawn from
+ * time, and the stage is still whenever the clip rests.
+ *
+ * COLOUR. The band sets `color-scheme: dark`, so every shell token (css/tokens.css) resolves to
+ * its dark value inside it, in both page themes: ink, the accent, good, bad and warn on the stage
+ * are the shell's own dark palette, whose contrast test/render/tokens.test.ts already holds. This
+ * stage adds only the field itself and the lights and shades laid on it (--st-*), which follow the
+ * page theme: indigo beside paper, blue-black beside the dark page. On paper (print, and the stills
+ * made for it) the same parts are drawn in the light palette with ink outlines. Every one of those
+ * colours is declared in css/stage-tokens.css; like every stylesheet but the tokens, this file
+ * names no colour of its own.
+ */
+/* ============================================================================================
+ * The static clip: what the page is before the script runs, and with scripting off
+ * ============================================================================================ */
+.lt-kind-clip {
+  padding-top: var(--lt-space-5);
+}
+.lt-kind-clip .lt-scene-head h2 {
+  font-size: clamp(1.25rem, 1.05rem + 0.9vw, 1.625rem);
+}
+.lt-kind-clip .lt-kicker {
+  margin-bottom: var(--lt-space-2);
+}
+.lt-kind-clip .lt-scene-body {
+  margin-top: var(--lt-space-4);
+}
+.lt-clip > * + * {
+  margin-top: var(--lt-space-5);
+}
+.lt-clip-desc {
+  max-width: var(--lt-measure);
+  font-size: var(--lt-size-lede);
+  line-height: 1.45;
+  color: var(--lt-ink-2);
+}
+.lt-prov {
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  color: var(--lt-ink-2);
+}
+.lt-prov-word {
+  font-weight: 650;
+  color: var(--lt-ink);
+}
+.lt-prov-word::after {
+  content: ".";
+}
+.lt-beats {
+  max-width: var(--lt-measure);
+  padding-left: 1.6em;
+}
+.lt-beat + .lt-beat {
+  margin-top: var(--lt-space-5);
+}
+.lt-beat > * + * {
+  margin-top: var(--lt-space-3);
+}
+.lt-beat::marker {
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  font-weight: 650;
+  color: var(--lt-accent);
+}
+.lt-onstage {
+  max-width: var(--lt-measure);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.5;
+}
+.lt-onstage > * + * {
+  margin-top: var(--lt-space-2);
+}
+.lt-parts {
+  padding-left: 1.3em;
+}
+.lt-parts-lines {
+  list-style: decimal;
+}
+.lt-parts-h {
+  margin-top: var(--lt-space-4);
+}
+/* A prediction answered on the picture, and the explore panel, as the page carries them before the
+   script runs: plain text, with nothing offered that cannot work. */
+.lt-pick-how {
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  color: var(--lt-ink-2);
+}
+.lt-explore {
+  max-width: var(--lt-measure);
+  padding: var(--lt-space-4) var(--lt-space-5);
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  background: var(--lt-surface);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.5;
+}
+.lt-explore > * + * {
+  margin-top: var(--lt-space-3);
+}
+.lt-explore-kicker {
+  margin-right: 0.5em;
+  color: var(--lt-accent);
+}
+.lt-explore-prompt {
+  font-family: var(--lt-font-prose);
+  font-size: var(--lt-size-body);
+  line-height: 1.45;
+  color: var(--lt-ink);
+}
+.lt-xp-controls {
+  display: grid;
+  gap: var(--lt-space-2);
+}
+.lt-xp-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.45em;
+}
+.lt-xp-label {
+  font-weight: 650;
+}
+.lt-xp-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.lt-xp-bounds {
+  color: var(--lt-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.lt-xp-goal > * + * {
+  margin-top: var(--lt-space-2);
+}
+.lt-xp-goal-kicker {
+  margin-right: 0.5em;
+}
+.lt-xp-goal-words {
+  font-family: var(--lt-font-prose);
+  font-size: var(--lt-size-body);
+  color: var(--lt-ink);
+}
+.lt-clip-failed {
+  max-width: var(--lt-measure);
+  padding: var(--lt-space-3) var(--lt-space-4);
+  border: 1px solid var(--lt-line-strong);
+  border-left-width: 4px;
+  border-radius: var(--lt-radius-s);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+}
+
+/* ============================================================================================
+ * The band: stage, caption strip and controls as one full-bleed block
+ * ============================================================================================ */
+.st-band {
+  color-scheme: dark;
+  position: relative;
+  background: var(--st-field-deep);
+  color: var(--lt-ink);
+  font-family: var(--lt-font-ui);
+}
+.st-stage {
+  position: relative;
+  overflow: hidden;
+  /* The top strip belongs to the provenance badge, so it never sits on a part. */
+  padding-top: 2.75rem;
+  background: radial-gradient(ellipse 85% 105% at 50% 40%, var(--st-field-lit), var(--st-field) 72%);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* The back plane: a dot grid that fades towards the edges. It never moves. (An element, not a
+   pseudo-element: a contrast checker gives up on text that has a painted pseudo-element behind it.) */
+.st-grain {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, var(--st-grain) 1px, transparent 1.6px);
+  background-size: 30px 30px;
+  background-position: center;
+  -webkit-mask-image: radial-gradient(ellipse 70% 85% at 50% 42%, black 15%, transparent 78%);
+  mask-image: radial-gradient(ellipse 70% 85% at 50% 42%, black 15%, transparent 78%);
+  pointer-events: none;
+}
+/*
+ * On the stage the shell's three surfaces are the stage's own, so anything drawn there with the
+ * shell tokens (a kit's raised surface, the background a custom frame paints) belongs to the field.
+ * test/clip/stage-tokens.test.ts holds the contrast of text on all of them.
+ */
+.st-view,
+.st-band > .lt-frame {
+  --lt-bg: var(--st-field);
+  --lt-surface: var(--st-surface);
+  --lt-sunken: var(--st-field-deep);
+  /* The shell's tertiary ink is 4.5:1 on its own surfaces, not on the lit field: here it is the stage's quiet ink. */
+  --lt-ink-3: var(--st-ink-quiet);
+}
+.st-view {
+  position: relative;
+  width: 100%;
+  max-width: 80rem;
+  min-height: 320px;
+  margin-inline: auto;
+  container-type: inline-size;
+}
+.st-world,
+.st-hud,
+.st-dots,
+.st-wires {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.st-world {
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 0;
+}
+.st-hud {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.st-dots {
+  width: 100%;
+  height: 100%;
+}
+.st-wires {
+  overflow: visible;
+  pointer-events: none;
+}
+/* No will-change on parts: measured, a layer for every part costs 35 to 45% more main-thread time per frame. */
+.st-p {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+/* The canvas reads the six tones from here, resolved for the theme. */
+.st-probe {
+  display: none;
+}
+.st-probe[data-tone="neutral"] {
+  color: var(--st-dot);
+}
+.st-probe[data-tone="accent"] {
+  color: var(--lt-accent);
+}
+.st-probe[data-tone="good"] {
+  color: var(--lt-good);
+}
+.st-probe[data-tone="bad"] {
+  color: var(--lt-bad);
+}
+.st-probe[data-tone="warn"] {
+  color: var(--lt-warn);
+}
+.st-probe[data-tone="muted"] {
+  color: var(--st-dot-muted);
+}
+
+/* ----- the box and its tones. A tone is never colour alone: the fill, the edge and the weight change with it. */
+.st-box {
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--lt-ink);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.005em;
+  text-align: center;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.st-tint {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid var(--st-pane-line);
+  border-radius: inherit;
+  background: var(--st-pane);
+  box-shadow:
+    var(--st-shadow),
+    inset 0 1px 0 var(--st-pane-top);
+}
+.st-tint[data-tone="accent"] {
+  border-color: transparent;
+  background: var(--lt-accent);
+}
+.st-tint[data-tone="good"] {
+  border-color: transparent;
+  background: var(--lt-good);
+  outline: 2px solid var(--lt-good);
+  outline-offset: 3px;
+}
+.st-tint[data-tone="bad"] {
+  border-color: transparent;
+  background: var(--lt-bad);
+  outline: 2px dashed var(--lt-bad);
+  outline-offset: 3px;
+}
+.st-tint[data-tone="warn"] {
+  border-color: transparent;
+  background: var(--lt-warn);
+  outline: 2px dotted var(--lt-warn);
+  outline-offset: 3px;
+}
+.st-tint[data-tone="muted"] {
+  border-style: dashed;
+  border-color: var(--st-hair-strong);
+  background: transparent;
+  box-shadow: none;
+}
+.st-box[data-tone="accent"],
+.st-box[data-tone="good"],
+.st-box[data-tone="bad"],
+.st-box[data-tone="warn"] {
+  color: var(--st-on-solid);
+}
+.st-box[data-tone="muted"] {
+  color: var(--st-ink-quiet);
+}
+/* The subject of a focus carries a rim while everything else recedes. */
+.st-box[data-lift="1"] > .st-tint {
+  box-shadow:
+    0 0 0 2px var(--lt-accent),
+    0 0 30px var(--st-glow),
+    var(--st-shadow);
+}
+/* One ring, sent outwards once when something happens to the box. The engine sets its size and fade. */
+.st-ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--lt-ink);
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+}
+.st-txt {
+  position: relative;
+  display: grid;
+  place-items: center;
+  max-width: 100%;
+  padding: 0 0.6em;
+}
+.st-l {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+}
+
+/* ----- read-outs: a small label over a large value */
+.st-stat {
+  grid-template-rows: auto auto;
+  align-content: center;
+  justify-items: start;
+  row-gap: 2px;
+  padding-inline: 14px;
+  border-radius: 10px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  text-align: left;
+}
+.st-stat > .st-tint {
+  border: 1px solid var(--st-hair);
+  background: var(--st-well);
+  box-shadow: none;
+  outline: 0;
+}
+.st-stat > .st-tint[data-tone="accent"] {
+  background: var(--st-well);
+  box-shadow: inset 3px 0 0 var(--lt-accent);
+}
+.st-stat > .st-tint[data-tone="good"] {
+  background: var(--st-well);
+  box-shadow: inset 3px 0 0 var(--lt-good);
+}
+.st-stat > .st-tint[data-tone="bad"] {
+  background: var(--st-well);
+  box-shadow: inset 3px 0 0 var(--lt-bad);
+}
+.st-stat > .st-tint[data-tone="warn"] {
+  background: var(--st-well);
+  box-shadow: inset 3px 0 0 var(--lt-warn);
+}
+.st-stat[data-tone="accent"] {
+  color: var(--lt-accent);
+}
+.st-stat[data-tone="good"] {
+  color: var(--lt-good);
+}
+.st-stat[data-tone="bad"] {
+  color: var(--lt-bad);
+}
+.st-stat[data-tone="warn"] {
+  color: var(--lt-warn);
+}
+.st-stat > .st-txt {
+  padding: 0;
+  justify-items: start;
+}
+.st-k {
+  position: relative;
+  font-size: 0.65625rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--st-ink-quiet);
+}
+@container (max-width: 519.98px) {
+  .st-stat {
+    padding-inline: 10px;
+    font-size: 1.1875rem;
+  }
+}
+
+/* ----- connectors */
+.st-wire {
+  fill: none;
+  stroke: var(--lt-ink-2);
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+}
+.st-head {
+  fill: var(--lt-ink-2);
+}
+.st-wire[data-lost="1"] {
+  stroke: var(--lt-bad);
+}
+.st-head[data-lost="1"] {
+  display: none;
+}
+.st-axis {
+  fill: none;
+  stroke: var(--st-axis);
+  stroke-width: 1.5;
+}
+.st-grid {
+  fill: none;
+  stroke: var(--st-rule);
+  stroke-width: 1;
+}
+
+/* ----- something that travels */
+.st-token {
+  z-index: 3;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 750;
+}
+.st-token > .st-tint {
+  border: 0;
+  box-shadow:
+    0 0 0 5px var(--st-halo),
+    0 10px 22px var(--st-shade);
+  outline: 0;
+}
+.st-token > .st-tint[data-tone="neutral"] {
+  background: var(--lt-ink);
+}
+.st-token[data-tone="neutral"] {
+  color: var(--st-on-solid);
+}
+.st-token > .st-tint[data-tone="bad"] {
+  box-shadow:
+    0 0 0 5px var(--st-halo-bad),
+    0 10px 22px var(--st-shade);
+}
+
+/* ----- sequence */
+.st-actor {
+  border-radius: 14px;
+  font-size: 1.1875rem;
+  font-weight: 720;
+  letter-spacing: -0.015em;
+}
+.st-actor > .st-tint[data-tone="neutral"] {
+  background: var(--st-pane-strong);
+}
+.st-life {
+  stroke: var(--st-hair-strong);
+  stroke-width: 1.5;
+}
+.st-head.st-life {
+  display: none;
+}
+.st-msgwire {
+  stroke: var(--lt-ink);
+}
+.st-head.st-msgwire {
+  fill: var(--lt-ink);
+}
+.st-msglabel {
+  border-radius: 999px;
+  font-size: 0.9375rem;
+  font-weight: 650;
+}
+.st-msglabel > .st-tint {
+  border-width: 1px;
+  background: var(--st-field);
+  box-shadow: none;
+}
+.st-msglabel > .st-tint[data-tone="bad"] {
+  border-color: var(--lt-bad);
+  background: var(--st-field);
+  outline: 0;
+}
+.st-msglabel[data-tone="bad"] {
+  color: var(--lt-bad);
+}
+.st-cross {
+  border-radius: 50%;
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+.st-cross > .st-tint,
+.st-cross > .st-tint[data-tone="bad"] {
+  border: 2px solid var(--lt-bad);
+  background: var(--st-field);
+  box-shadow: none;
+  outline: 0;
+}
+.st-cross[data-tone="bad"] {
+  color: var(--lt-bad);
+}
+
+/* ----- cells */
+.st-cell {
+  border-radius: 11px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+.st-cell-large {
+  border-radius: 14px;
+  font-size: 2.125rem;
+}
+.st-cell-medium {
+  font-size: 1.5rem;
+}
+.st-cell-small {
+  font-size: 1.0625rem;
+}
+.st-cell-tight {
+  border-radius: 5px;
+  font-size: 0.75rem;
+  letter-spacing: -0.03em;
+}
+.st-cell-tight > .st-txt {
+  padding: 0;
+}
+.st-cell-tight > .st-tint {
+  border-width: 1px;
+  outline-offset: 1px;
+  outline-width: 1.5px;
+}
+.st-idx {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--st-ink-quiet);
+  font-variant-numeric: tabular-nums;
+}
+.st-ptr {
+  z-index: 2;
+  border-radius: 9px;
+  font-size: 0.90625rem;
+  font-weight: 750;
+  color: var(--st-on-solid);
+}
+.st-ptr > .st-tint,
+.st-ptr > .st-tint[data-tone] {
+  border: 0;
+  background: var(--lt-accent);
+  box-shadow: 0 8px 16px var(--st-well);
+  outline: 0;
+}
+.st-ptr > .st-tint[data-tone="good"] {
+  background: var(--lt-good);
+}
+.st-ptr > .st-tint[data-tone="warn"] {
+  background: var(--lt-warn);
+}
+.st-ptr > .st-tint[data-tone="bad"] {
+  background: var(--lt-bad);
+}
+.st-ptr > .st-tint[data-tone="neutral"] {
+  background: var(--lt-ink);
+}
+/* The pointer's tip is part of its fill, so it changes tone with it. */
+.st-ptr > .st-tint::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 2px;
+  background: inherit;
+  transform: rotate(45deg);
+}
+.st-ptr-below > .st-tint::before {
+  top: -4px;
+}
+.st-ptr-above > .st-tint::before {
+  bottom: -4px;
+}
+@container (max-width: 519.98px) {
+  .st-ptr {
+    font-size: 0.75rem;
+  }
+}
+.st-bracket {
+  z-index: 0;
+  border-radius: 15px;
+  pointer-events: none;
+}
+.st-bracket > .st-tint {
+  border: 2px solid var(--lt-accent);
+  background: var(--st-accent-wash);
+  box-shadow: none;
+}
+.st-bracket > .st-txt {
+  position: absolute;
+  left: 6px;
+  top: -22px;
+  padding: 0;
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--lt-accent);
+}
+.st-bracket[data-align="right"] > .st-txt {
+  left: auto;
+  right: 6px;
+}
+
+/* ----- flow */
+.st-node {
+  border-radius: 16px;
+  font-size: clamp(0.9375rem, 1.5cqw, 1.3125rem);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+.st-node .st-l {
+  white-space: normal;
+  text-wrap: balance;
+}
+.st-edge {
+  stroke: var(--lt-ink-2);
+}
+.st-elabel {
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: var(--lt-ink-2);
+}
+.st-elabel > .st-tint {
+  border: 0;
+  border-radius: 6px;
+  background: var(--st-field);
+  box-shadow: none;
+}
+@container (max-width: 519.98px) {
+  .st-actor {
+    font-size: 1rem;
+  }
+  .st-msglabel {
+    font-size: 0.8125rem;
+  }
+  .st-tipval {
+    font-size: 0.9375rem;
+  }
+  .st-seriesname,
+  .st-barname {
+    font-size: 0.75rem;
+  }
+  .st-tick,
+  .st-xtick,
+  .st-ylabel,
+  .st-idx,
+  .st-bracket > .st-txt {
+    font-size: 0.6875rem;
+  }
+  .st-barval {
+    font-size: 1rem;
+  }
+  .st-series {
+    stroke-width: 3.5;
+  }
+}
+
+/* ----- dots */
+.st-glabel {
+  z-index: 2;
+  border-radius: 999px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+.st-glabel > .st-tint,
+.st-glabel > .st-tint[data-tone] {
+  border: 1px solid var(--st-pane-line);
+  background: var(--st-field);
+  box-shadow: none;
+  outline: 0;
+}
+.st-glabel > .st-tint[data-tone="accent"] {
+  border-color: var(--lt-accent);
+  box-shadow: inset 0 0 0 1px var(--lt-accent);
+}
+.st-glabel > .st-tint[data-tone="good"] {
+  border-color: var(--lt-good);
+  box-shadow: inset 0 0 0 1px var(--lt-good);
+}
+.st-glabel > .st-tint[data-tone="bad"] {
+  border-color: var(--lt-bad);
+  box-shadow: inset 0 0 0 1px var(--lt-bad);
+}
+.st-glabel > .st-tint[data-tone="warn"] {
+  border-color: var(--lt-warn);
+  box-shadow: inset 0 0 0 1px var(--lt-warn);
+}
+.st-glabel > .st-tint[data-tone="muted"] {
+  border-style: dashed;
+}
+.st-glabel[data-tone="accent"] {
+  color: var(--lt-accent);
+}
+.st-glabel[data-tone="good"] {
+  color: var(--lt-good);
+}
+.st-glabel[data-tone="bad"] {
+  color: var(--lt-bad);
+}
+.st-glabel[data-tone="warn"] {
+  color: var(--lt-warn);
+}
+.st-glabel[data-tone="muted"] {
+  color: var(--st-ink-quiet);
+}
+@container (max-width: 519.98px) {
+  .st-glabel {
+    font-size: 0.78125rem;
+  }
+}
+.st-legend {
+  position: absolute;
+  bottom: 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--st-ink-quiet);
+}
+.st-legend[data-side="left"] {
+  left: 18px;
+}
+.st-legend[data-side="right"] {
+  right: 18px;
+}
+.st-legend[data-side="above"] {
+  left: 14px;
+}
+
+/* ----- charts */
+.st-bar {
+  overflow: hidden;
+  border-radius: 9px 9px 0 0;
+}
+.st-bar-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 9px 9px 0 0;
+  background: var(--lt-accent);
+  box-shadow: inset 0 1px 0 var(--st-sheen);
+}
+.st-bar-fill > .st-tint {
+  border: 0;
+  border-radius: 0;
+  background: var(--lt-accent);
+  box-shadow: none;
+  outline: 0;
+}
+.st-bar-fill[data-tone="neutral"],
+.st-bar-fill > .st-tint[data-tone="neutral"] {
+  background: var(--st-plain);
+}
+.st-bar-fill[data-tone="good"],
+.st-bar-fill > .st-tint[data-tone="good"] {
+  background: var(--lt-good);
+}
+.st-bar-fill[data-tone="bad"],
+.st-bar-fill > .st-tint[data-tone="bad"] {
+  background: var(--lt-bad);
+}
+.st-bar-fill[data-tone="warn"],
+.st-bar-fill > .st-tint[data-tone="warn"] {
+  background: var(--lt-warn);
+}
+.st-bar-fill[data-tone="muted"],
+.st-bar-fill > .st-tint[data-tone="muted"] {
+  background: var(--st-dot-muted);
+}
+.st-barval,
+.st-barname {
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.st-barval {
+  font-size: 1.375rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.st-barval[data-tone="good"] {
+  color: var(--lt-good);
+}
+.st-barval[data-tone="bad"] {
+  color: var(--lt-bad);
+}
+.st-barval[data-tone="warn"] {
+  color: var(--lt-warn);
+}
+.st-barname {
+  overflow: hidden;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  color: var(--lt-ink-2);
+}
+.st-ylabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--st-ink-quiet);
+}
+/* The wash under a line, down to the baseline. It is drawn only as far as the line has got. */
+.st-area {
+  fill: var(--st-plain);
+  fill-opacity: 0.07;
+  stroke: none;
+}
+.st-area[data-tone="accent"] {
+  fill: var(--lt-accent);
+  fill-opacity: 0.16;
+}
+.st-area[data-tone="good"] {
+  fill: var(--lt-good);
+  fill-opacity: 0.14;
+}
+.st-area[data-tone="bad"] {
+  fill: var(--lt-bad);
+  fill-opacity: 0.14;
+}
+.st-area[data-tone="warn"] {
+  fill: var(--lt-warn);
+  fill-opacity: 0.14;
+}
+.st-series {
+  fill: none;
+  stroke: var(--lt-accent);
+  stroke-width: 4.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+}
+.st-series[data-tone="neutral"] {
+  stroke: var(--st-plain);
+  stroke-width: 3;
+}
+.st-series[data-tone="muted"] {
+  stroke: var(--st-dot);
+  stroke-width: 3;
+}
+.st-series[data-tone="good"] {
+  stroke: var(--lt-good);
+}
+.st-series[data-tone="bad"] {
+  stroke: var(--lt-bad);
+}
+.st-series[data-tone="warn"] {
+  stroke: var(--lt-warn);
+}
+.st-tip {
+  fill: var(--lt-accent);
+  stroke: var(--st-field);
+  stroke-width: 3;
+}
+.st-tip[data-tone="neutral"] {
+  fill: var(--st-plain);
+}
+.st-tip[data-tone="muted"] {
+  fill: var(--st-dot);
+}
+.st-tip[data-tone="good"] {
+  fill: var(--lt-good);
+}
+.st-tip[data-tone="bad"] {
+  fill: var(--lt-bad);
+}
+.st-tip[data-tone="warn"] {
+  fill: var(--lt-warn);
+}
+.st-tipval {
+  width: 100px;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 6px var(--st-field);
+}
+/* A line's name starts with a short stroke of its own weight and colour: the legend is the line. */
+.st-seriesname::before {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 0;
+  margin-right: 6px;
+  border-top: 3px solid currentColor;
+  border-radius: 2px;
+  vertical-align: 0.28em;
+}
+.st-seriesname {
+  width: 180px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 22px;
+  white-space: nowrap;
+  color: var(--lt-accent);
+}
+.st-seriesname[data-align="right"] {
+  text-align: right;
+}
+.st-seriesname[data-tone="neutral"],
+.st-seriesname[data-tone="muted"] {
+  color: var(--lt-ink-2);
+}
+.st-seriesname[data-tone="good"] {
+  color: var(--lt-good);
+}
+.st-seriesname[data-tone="bad"] {
+  color: var(--lt-bad);
+}
+.st-seriesname[data-tone="warn"] {
+  color: var(--lt-warn);
+}
+.st-tick {
+  white-space: nowrap;
+  text-align: right;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--st-ink-quiet);
+  font-variant-numeric: tabular-nums;
+}
+.st-xtick {
+  width: 100px;
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--st-ink-quiet);
+}
+
+/* ----- a function plot: the curve is rebuilt from its formula, so it has no dash to draw along */
+.st-curve {
+  fill: none;
+  stroke: var(--lt-accent);
+  stroke-width: calc(4.5px + var(--st-swell, 0) * 3.5px);
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.st-curve[data-tone="neutral"] {
+  stroke: var(--st-plain);
+  stroke-width: calc(3.25px + var(--st-swell, 0) * 3.5px);
+}
+.st-curve[data-tone="muted"] {
+  stroke: var(--st-dot);
+  stroke-width: calc(3px + var(--st-swell, 0) * 3.5px);
+  stroke-dasharray: 2 7;
+}
+.st-curve[data-tone="good"] {
+  stroke: var(--lt-good);
+}
+.st-curve[data-tone="bad"] {
+  stroke: var(--lt-bad);
+}
+.st-curve[data-tone="warn"] {
+  stroke: var(--lt-warn);
+}
+.st-tickmark {
+  fill: none;
+  stroke: var(--st-axis);
+  stroke-width: 1.25;
+}
+.st-xlabel {
+  overflow: hidden;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  line-height: 16px;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--st-ink-quiet);
+}
+/* A marked point: a ring of its colour round a dark centre, a dashed guide to each axis, and the two values where the guides land. */
+.st-pt {
+  fill: var(--st-field-deep);
+  stroke: var(--lt-warn);
+  stroke-width: 4;
+}
+.st-pt-halo {
+  fill: var(--lt-warn);
+  fill-opacity: 0.32;
+  stroke: none;
+}
+.st-guide {
+  fill: none;
+  stroke: var(--lt-warn);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 5;
+  stroke-linecap: round;
+}
+.st-pt[data-tone="accent"],
+.st-guide[data-tone="accent"] {
+  stroke: var(--lt-accent);
+}
+.st-pt[data-tone="good"],
+.st-guide[data-tone="good"] {
+  stroke: var(--lt-good);
+}
+.st-pt[data-tone="bad"],
+.st-guide[data-tone="bad"] {
+  stroke: var(--lt-bad);
+}
+.st-pt[data-tone="neutral"],
+.st-guide[data-tone="neutral"],
+.st-pt[data-tone="muted"],
+.st-guide[data-tone="muted"] {
+  stroke: var(--st-plain);
+}
+.st-pt-halo[data-tone="accent"] {
+  fill: var(--lt-accent);
+}
+.st-pt-halo[data-tone="good"] {
+  fill: var(--lt-good);
+}
+.st-pt-halo[data-tone="bad"] {
+  fill: var(--lt-bad);
+}
+.st-pt-halo[data-tone="neutral"],
+.st-pt-halo[data-tone="muted"] {
+  fill: var(--st-plain);
+}
+.st-pt-pill,
+.st-pt-name {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 0.78125rem;
+  font-weight: 750;
+  line-height: 1;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* The values on the axes are solid: they cover the tick they land on. */
+.st-pt-pill {
+  background: var(--lt-warn);
+  color: var(--st-on-solid);
+}
+.st-pt-pill[data-tone="accent"] {
+  background: var(--lt-accent);
+}
+.st-pt-pill[data-tone="good"] {
+  background: var(--lt-good);
+}
+.st-pt-pill[data-tone="bad"] {
+  background: var(--lt-bad);
+}
+.st-pt-pill[data-tone="neutral"],
+.st-pt-pill[data-tone="muted"] {
+  background: var(--st-plain);
+}
+.st-pt-name {
+  border: 1.5px solid var(--lt-warn);
+  background: var(--st-field-deep);
+  font-size: 0.8125rem;
+  color: var(--lt-warn);
+}
+.st-pt-name[data-tone="accent"] {
+  border-color: var(--lt-accent);
+  color: var(--lt-accent);
+}
+.st-pt-name[data-tone="good"] {
+  border-color: var(--lt-good);
+  color: var(--lt-good);
+}
+.st-pt-name[data-tone="bad"] {
+  border-color: var(--lt-bad);
+  color: var(--lt-bad);
+}
+.st-pt-name[data-tone="neutral"],
+.st-pt-name[data-tone="muted"] {
+  border-color: var(--st-plain);
+  color: var(--lt-ink);
+}
+
+/* ----- a part whose number is the learner's to change carries the slider's colour */
+.st-stat[data-live="1"] > .st-tint,
+.st-stat[data-live="1"] > .st-tint[data-tone] {
+  border-color: var(--lt-accent);
+  box-shadow: inset 0 -3px 0 var(--lt-accent);
+}
+.st-ln-val[data-live="1"] > .st-tint {
+  border-color: var(--lt-accent);
+  box-shadow: inset 0 -2px 0 var(--lt-accent);
+}
+
+/* ----- kinetic type */
+.st-lines {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45em;
+  padding: 7% 8%;
+  text-align: center;
+}
+.st-line {
+  position: relative;
+  margin: 0;
+  font-family: var(--lt-font-ui);
+  font-weight: 780;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  color: var(--lt-ink);
+}
+.st-line-xl {
+  font-size: clamp(2rem, 7.6cqw, 5.25rem);
+}
+.st-line-l {
+  font-size: clamp(1.4rem, 4.4cqw, 2.875rem);
+  font-weight: 720;
+  letter-spacing: -0.028em;
+}
+.st-line-m {
+  max-width: 34em;
+  font-size: clamp(1rem, 2.1cqw, 1.375rem);
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.005em;
+  color: var(--lt-ink-2);
+}
+.st-w {
+  display: inline-block;
+}
+.st-line[data-tone="accent"] {
+  color: var(--lt-accent);
+}
+.st-line[data-tone="good"] {
+  color: var(--lt-good);
+}
+.st-line[data-tone="bad"] {
+  color: var(--lt-bad);
+}
+.st-line[data-tone="warn"] {
+  color: var(--lt-warn);
+}
+.st-line[data-tone="muted"] {
+  color: var(--st-ink-quiet);
+}
+/* The rule a line is given with its tone: drawn once, from the left. */
+.st-line-rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.16em;
+  height: max(3px, 0.07em);
+  border-radius: 99px;
+  background: currentColor;
+  transform-origin: 0 50%;
+  opacity: 0;
+}
+
+/* ----- on the stage, outside the picture: the provenance badge and the Play button */
+.lt-clip-live .lt-prov {
+  position: absolute;
+  top: 12px;
+  right: max(12px, calc((100% - 80rem) / 2 + 16px));
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 3px 5px 3px 10px;
+  min-height: 1.875rem;
+  border: 1px solid var(--st-hair);
+  border-radius: 999px;
+  /* Opaque, so its words have a background a checker can measure. */
+  background: var(--st-field-deep);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--lt-ink-2);
+  cursor: default;
+}
+.lt-clip-live .lt-prov-word {
+  padding-right: 5px;
+  font-weight: 700;
+  color: var(--lt-ink-2);
+}
+.lt-clip-live .lt-prov-word::after {
+  content: none;
+}
+/* The mark beside the word: solid for sourced, half for a worked example, hollow for an illustration. */
+.lt-clip-live .lt-prov::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--lt-accent);
+  border-radius: 50%;
+  background: var(--lt-accent);
+}
+.lt-clip-live .lt-prov[data-provenance="worked"]::before {
+  background: linear-gradient(90deg, var(--lt-accent) 50%, transparent 50%);
+}
+.lt-clip-live .lt-prov[data-provenance="illustrative"]::before {
+  border-style: dashed;
+  background: transparent;
+}
+/* Its explanation is for a screen reader here; in the text version it is plain text. */
+.lt-clip-live .lt-prov-note {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.lt-clip-live .lt-prov .lt-cites {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.lt-clip-live .lt-prov .lt-chip {
+  vertical-align: 0;
+}
+/* While the stage is the learner's it carries a rim of the slider's colour, and says so. */
+.lt-clip-live[data-exploring] .st-stage {
+  box-shadow:
+    inset 0 0 0 2px var(--lt-accent),
+    inset 0 0 44px var(--st-halo);
+  cursor: default;
+}
+.lt-clip-live[data-exploring][data-won] .st-stage {
+  box-shadow:
+    inset 0 0 0 2px var(--lt-good),
+    inset 0 0 44px var(--st-halo-good);
+}
+.st-live {
+  position: absolute;
+  top: 12px;
+  left: max(12px, calc((100% - 80rem) / 2 + 16px));
+  z-index: 5;
+  display: none;
+  align-items: center;
+  gap: 7px;
+  min-height: 1.875rem;
+  margin: 0;
+  padding: 3px 12px 3px 10px;
+  border-radius: 999px;
+  background: var(--lt-accent);
+  color: var(--lt-accent-ink);
+  font-size: 0.6875rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.st-live::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.lt-clip-live[data-exploring] .st-live {
+  display: inline-flex;
+}
+/* A narrow stage has one line at its top, and the provenance badge has it. */
+@media (max-width: 36rem) {
+  .lt-clip-live[data-exploring] .st-live {
+    display: none;
+  }
+}
+.lt-clip-live[data-exploring][data-won] .st-live {
+  background: var(--lt-good);
+  color: var(--st-on-solid);
+}
+
+/* ----- a tap gate: one real button over every part of the stage that could be the answer */
+.st-taps {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+}
+.st-tap {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  pointer-events: auto;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* The offer: a dashed outline round the part. Hover and focus make it solid. */
+.st-tap-mark {
+  position: absolute;
+  inset: -3px;
+  border: 2px dashed var(--st-hair-strong);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.st-tap:hover > .st-tap-mark {
+  border-style: solid;
+  border-color: var(--lt-ink);
+  background: var(--st-wash);
+}
+.st-tap:focus-visible {
+  outline: 3px solid var(--lt-ink);
+  outline-offset: 4px;
+}
+.st-tap:focus-visible > .st-tap-mark {
+  border-style: solid;
+  border-color: var(--lt-accent);
+  background: var(--st-accent-wash);
+}
+.st-tap[aria-disabled="true"] {
+  cursor: default;
+}
+.st-tap[aria-disabled="true"]:not([data-state]) > .st-tap-mark {
+  border-color: transparent;
+  background: none;
+}
+/* A mark is never colour alone: a cross and a broken line, or a tick and a solid one. */
+.st-tap[data-state="wrong"] > .st-tap-mark {
+  border: 2px dashed var(--lt-bad);
+  background: none;
+}
+.st-tap[data-state="right"] > .st-tap-mark {
+  border: 3px solid var(--lt-good);
+  background: none;
+  box-shadow: 0 0 0 5px var(--st-halo-good);
+}
+.st-tap[data-state] > .st-tap-mark::after {
+  position: absolute;
+  top: -11px;
+  right: -11px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--st-on-solid);
+}
+.st-tap[data-state="wrong"] > .st-tap-mark::after {
+  content: "\2715";
+  content: "\2715" / "";
+  background: var(--lt-bad);
+}
+.st-tap[data-state="right"] > .st-tap-mark::after {
+  content: "\2713";
+  content: "\2713" / "";
+  background: var(--lt-good);
+}
+.lt-clip-live .lt-pick .lt-pick-how {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  font-weight: 650;
+  color: var(--lt-accent);
+}
+/* A fingertip: a ring with a dot in it. */
+.lt-clip-live .lt-pick .lt-pick-how::before {
+  content: "";
+  flex: none;
+  width: 0.5em;
+  height: 0.5em;
+  border: 0.3em solid transparent;
+  border-radius: 50%;
+  background: var(--lt-accent);
+  background-clip: padding-box;
+  box-shadow: 0 0 0 2px var(--lt-accent);
+}
+.lt-clip-live .lt-pick > .lt-prompt {
+  font-weight: 600;
+}
+
+.st-bigplay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 3.25rem;
+  padding: 0 1.7rem 0 1.3rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--lt-accent);
+  color: var(--lt-accent-ink);
+  font-family: var(--lt-font-ui);
+  font-size: 1.0625rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  box-shadow:
+    0 0 0 8px var(--st-halo),
+    0 18px 40px var(--st-shade);
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+}
+.st-bigplay:hover {
+  box-shadow:
+    0 0 0 11px var(--st-halo),
+    0 18px 40px var(--st-shade);
+}
+.st-bigplay:focus-visible {
+  outline: 2px solid var(--lt-ink);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+/* Play is shown once the stage has arrived: not over the wipe, not over parts still landing. */
+.lt-clip-live[data-arriving] .st-bigplay {
+  opacity: 0;
+}
+
+/* ----- the caption strip */
+.st-strip {
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  min-height: 6.25rem;
+  padding: var(--lt-space-4) max(var(--lt-space-4), var(--lt-gutter)) var(--lt-space-3);
+  background: var(--st-field-deep);
+}
+.st-strip > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+.st-slate {
+  position: relative;
+  z-index: 1;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lt-ink-3);
+}
+.lt-clip-live[data-slate="0"] .st-slate,
+.lt-clip-live[data-asking] .st-slate,
+.lt-clip-live[data-text] .st-slate {
+  display: none;
+}
+.lt-clip-live .lt-beats {
+  display: grid;
+  width: 100%;
+  max-width: 46rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lt-clip-live .lt-beat {
+  grid-area: 1 / 1;
+  align-self: center;
+  min-width: 0;
+  margin: 0;
+}
+.lt-clip-live .lt-beat[data-on="0"]:not([data-asking]) {
+  visibility: hidden;
+}
+.lt-clip-live .lt-beat > .lt-predict {
+  display: none;
+}
+.lt-clip-live .lt-beat[data-asking] > .lt-predict {
+  display: flex;
+  flex-direction: column;
+}
+/* What was said about the answer stands above the button that goes on from it. */
+.lt-clip-live .lt-beat[data-asking] > .lt-predict > [data-outcome] {
+  order: 1;
+}
+.lt-clip-live .lt-beat[data-asking] > .lt-predict > [data-actions] {
+  order: 2;
+}
+.lt-clip-live[data-asking] .lt-cap {
+  display: none;
+}
+.lt-clip-live .lt-cap {
+  margin: 0;
+  font-family: var(--lt-font-prose);
+  font-size: clamp(1.125rem, 1.02rem + 0.55vw, 1.4375rem);
+  line-height: 1.38;
+  text-align: center;
+  color: var(--lt-ink);
+}
+.lt-clip-live .lt-cap p {
+  text-wrap: balance;
+}
+.lt-clip-live .lt-cap .lt-chip {
+  background: var(--st-wash);
+  border-color: var(--st-hair-strong);
+  color: var(--lt-ink-2);
+}
+/* A caption that is the agent's own (an analogy, a worked example) keeps its label and loses its box. */
+.lt-clip-live .lt-cap .lt-note {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.lt-clip-live .lt-cap .lt-note > .lt-label {
+  margin-bottom: var(--lt-space-1);
+  color: var(--lt-accent);
+}
+.lt-clip-live .lt-cap .lt-limits,
+.lt-clip-live .lt-cap .lt-based {
+  margin-top: var(--lt-space-1);
+  padding-top: 0;
+  border: 0;
+  font-size: var(--lt-size-xs);
+}
+.lt-clip-live .lt-cap .lt-quote {
+  padding-left: 0;
+  border-left: 0;
+}
+.lt-clip-live .lt-cap .lt-quote blockquote {
+  font-size: inherit;
+  line-height: inherit;
+}
+.lt-clip-live .lt-cap .lt-quote .lt-quote-from {
+  margin-top: var(--lt-space-1);
+  font-size: var(--lt-size-xs);
+}
+/* A source card opened from the band is still a page thing: it follows the page's theme. */
+.st-band .lt-source {
+  color-scheme: light dark;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: auto;
+}
+:root[data-theme="light"] .st-band .lt-source {
+  color-scheme: light;
+}
+:root[data-theme="dark"] .st-band .lt-source {
+  color-scheme: dark;
+}
+
+/* The prediction: the clip has stopped and is asking. */
+.lt-clip-live .lt-predict {
+  width: 100%;
+  max-width: 40rem;
+  justify-self: center;
+  margin-inline: auto;
+  padding: var(--lt-space-4) var(--lt-space-5);
+  border: 1px solid var(--st-hair);
+  border-radius: 14px;
+  background: var(--st-well);
+  text-align: left;
+}
+.lt-clip-live .lt-predict .lt-prompt {
+  font-family: var(--lt-font-prose);
+  font-size: 1.125rem;
+}
+.lt-clip-live .lt-predict .lt-option {
+  border-color: var(--st-hair-strong);
+  border-radius: 10px;
+  background: var(--st-wash);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.4;
+}
+.lt-clip-live .lt-predict .lt-callout {
+  background: var(--st-wash);
+}
+.lt-clip-live .lt-predict .lt-btn-quiet {
+  border-color: var(--st-hair-strong);
+}
+@media (max-width: 30rem) {
+  .lt-clip-live .lt-predict {
+    padding: var(--lt-space-3) var(--lt-space-4);
+  }
+}
+/* Where there is room the options stand side by side, so the question, the picture it is about and the controls share one screen. */
+@media (min-width: 56rem) {
+  .lt-clip-live[data-asking] .lt-beats {
+    max-width: 64rem;
+  }
+  .lt-clip-live .lt-predict {
+    max-width: 64rem;
+  }
+  .lt-clip-live .lt-predict .lt-options {
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    align-items: stretch;
+  }
+  .lt-clip-live .lt-predict > * + * {
+    margin-top: var(--lt-space-3);
+  }
+}
+
+/* ----- explore: "Your turn". The panel takes the caption's place once the clip has played. */
+.lt-clip-live .st-explore {
+  display: none;
+  width: 100%;
+  max-width: 62rem;
+  margin: 0;
+  padding: var(--lt-space-4) var(--lt-space-5);
+  border: 1px solid var(--st-hair-strong);
+  border-radius: 16px;
+  background: var(--st-well);
+  box-shadow: inset 0 3px 0 var(--lt-accent);
+  color: var(--lt-ink);
+  font-size: var(--lt-size-s);
+  text-align: left;
+}
+.lt-clip-live .st-explore > * {
+  margin: 0;
+  min-width: 0;
+}
+.lt-clip-live[data-exploring] .st-explore {
+  display: grid;
+  gap: var(--lt-space-4);
+}
+.lt-clip-live[data-exploring] .lt-beats,
+.lt-clip-live[data-exploring] .st-opts {
+  display: none;
+}
+.lt-clip-live[data-exploring][data-text] .lt-beats {
+  display: block;
+}
+.lt-clip-live[data-exploring] .st-strip {
+  align-items: start;
+}
+.st-explore .lt-explore-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--lt-space-2) var(--lt-space-3);
+}
+.st-explore .lt-explore-kicker {
+  align-self: center;
+  margin: 0;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: var(--lt-accent);
+  color: var(--lt-accent-ink);
+  font-weight: 750;
+  line-height: 1;
+}
+.st-explore .lt-explore-prompt {
+  flex: 1 1 16rem;
+  font-size: 1.125rem;
+  line-height: 1.38;
+}
+.st-explore .lt-xp-controls {
+  gap: var(--lt-space-4);
+  align-content: start;
+}
+.st-explore .lt-xp-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "label out"
+    "slide slide"
+    "bounds bounds";
+  align-items: end;
+  gap: 0 var(--lt-space-3);
+}
+.st-explore .lt-xp-label {
+  grid-area: label;
+  padding-bottom: 0.2rem;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  line-height: 1.25;
+  color: var(--lt-ink);
+}
+/* The static "starts at" is for the page without the script, and for paper. */
+.st-explore .lt-xp-now {
+  display: none;
+}
+.st-xp-out {
+  grid-area: out;
+  font-size: 1.75rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--lt-accent);
+}
+/* The slider: a native range input over a track of our own, so the filled part and the halo can follow it. */
+.st-xp-slide {
+  grid-area: slide;
+  position: relative;
+  height: 2.75rem;
+  --xp-at: 0;
+}
+.st-xp-track {
+  position: absolute;
+  inset: 50% 14px auto;
+  height: 8px;
+  margin-top: -4px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--st-hair);
+}
+.st-xp-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--lt-accent);
+  transform-origin: 0 50%;
+  transform: scaleX(var(--xp-at));
+}
+.st-xp-halo {
+  position: absolute;
+  top: 50%;
+  left: calc(14px + (100% - 28px) * var(--xp-at));
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 var(--st-halo);
+  pointer-events: none;
+}
+.lt-xp-control[data-active] .st-xp-halo,
+.st-xp-slide:hover .st-xp-halo {
+  box-shadow: 0 0 0 9px var(--st-halo);
+}
+.st-explore .lt-xp-range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  cursor: grab;
+  touch-action: pan-y;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.st-explore .lt-xp-range:active {
+  cursor: grabbing;
+}
+.st-explore .lt-xp-range::-webkit-slider-runnable-track {
+  height: 2.75rem;
+  background: transparent;
+}
+.st-explore .lt-xp-range::-moz-range-track {
+  height: 2.75rem;
+  background: transparent;
+}
+.st-explore .lt-xp-range::-webkit-slider-thumb {
+  width: 28px;
+  height: 28px;
+  margin-top: calc(1.375rem - 14px);
+  border: 4px solid var(--lt-accent);
+  border-radius: 50%;
+  background: var(--lt-ink);
+  box-shadow: 0 3px 10px var(--st-shade);
+  appearance: none;
+  -webkit-appearance: none;
+}
+.st-explore .lt-xp-range::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  border: 4px solid var(--lt-accent);
+  border-radius: 50%;
+  background: var(--lt-ink);
+  box-shadow: 0 3px 10px var(--st-shade);
+}
+.st-explore .lt-xp-range:focus-visible {
+  outline: var(--lt-focus);
+  outline-offset: 0;
+  border-radius: 999px;
+}
+.st-explore .lt-xp-bounds {
+  grid-area: bounds;
+  display: flex;
+  justify-content: space-between;
+  padding-inline: 2px;
+  font-size: var(--lt-size-xs);
+  font-weight: 600;
+  color: var(--st-ink-quiet);
+}
+.st-explore .lt-xp-bounds > .lt-xp-word {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* The goal: an open ring until it is reached, then a tick, and why it worked. */
+.st-explore .lt-xp-goal {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  gap: var(--lt-space-2) var(--lt-space-3);
+  padding: var(--lt-space-3) var(--lt-space-4);
+  border: 1.5px dashed var(--st-hair-strong);
+  border-radius: 12px;
+}
+.st-explore .lt-xp-goal > * {
+  margin: 0;
+}
+.st-xp-mark {
+  grid-row: 1;
+  align-self: start;
+  overflow: visible;
+}
+.st-xp-ring {
+  fill: none;
+  stroke: var(--lt-ink-2);
+  stroke-width: 1.75;
+  stroke-dasharray: 3.2 3.2;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.st-xp-tick {
+  fill: none;
+  stroke: var(--st-on-solid);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.st-explore .lt-xp-goal-text {
+  display: grid;
+  gap: 2px;
+}
+.st-explore .lt-xp-goal-kicker {
+  margin: 0;
+  color: var(--lt-ink-2);
+}
+.st-explore .lt-xp-goal-words {
+  font-size: 1.0625rem;
+  line-height: 1.38;
+}
+.st-xp-done {
+  grid-column: 2;
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.5;
+  color: var(--lt-ink);
+}
+.st-explore .lt-xp-goal[data-reached] {
+  border-style: solid;
+  border-color: var(--lt-good);
+  background: var(--st-wash);
+}
+.lt-xp-goal[data-reached] .st-xp-ring {
+  fill: var(--lt-good);
+  stroke: var(--lt-good);
+  stroke-dasharray: none;
+}
+.lt-xp-goal[data-reached] .st-xp-tick {
+  stroke-dashoffset: 0;
+}
+.st-explore .lt-xp-goal[data-reached] .lt-xp-goal-kicker {
+  color: var(--lt-good);
+}
+.st-explore .lt-xp-actions {
+  justify-content: flex-end;
+}
+.st-explore .lt-xp-actions .lt-btn {
+  min-height: 2.5rem;
+  border-color: var(--st-hair-strong);
+  background: transparent;
+}
+.st-explore .lt-xp-actions .lt-btn:hover {
+  border-color: var(--lt-ink);
+}
+/* Where there is room the sliders and the goal stand side by side, and "Replay" sits at the head. */
+@media (min-width: 56rem) {
+  .lt-clip-live[data-exploring] .st-explore {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) auto;
+    grid-template-areas:
+      "head head actions"
+      "controls goal goal";
+    align-items: start;
+    gap: var(--lt-space-3) var(--lt-space-6);
+  }
+  .st-explore .lt-explore-head {
+    grid-area: head;
+  }
+  .st-explore .lt-xp-controls {
+    grid-area: controls;
+  }
+  .st-explore .lt-xp-goal {
+    grid-area: goal;
+  }
+  .st-explore .lt-xp-actions {
+    grid-area: actions;
+  }
+  /* No goal: the sliders have the whole width. */
+  .st-explore[data-solo] .lt-xp-controls {
+    grid-column: 1 / -1;
+  }
+}
+/* On a phone the picture and the slider must share the screen: the panel is tight, and the slider comes straight after one short line. */
+@media (max-width: 30rem) {
+  .lt-clip-live[data-exploring] .st-strip {
+    padding-top: var(--lt-space-3);
+  }
+  .lt-clip-live .st-explore {
+    padding: var(--lt-space-3) var(--lt-space-4);
+  }
+  .lt-clip-live[data-exploring] .st-explore {
+    gap: var(--lt-space-3);
+  }
+  .st-explore .lt-explore-head {
+    display: block;
+  }
+  .st-explore .lt-explore-kicker {
+    display: inline-block;
+    margin-right: 0.45em;
+    padding: 0.22rem 0.55rem;
+    vertical-align: 0.12em;
+  }
+  .st-explore .lt-explore-prompt {
+    display: inline;
+    font-size: 0.9375rem;
+    line-height: 1.4;
+  }
+  .st-xp-out {
+    font-size: 1.5rem;
+  }
+  .st-explore .lt-xp-goal {
+    padding: var(--lt-space-3);
+  }
+  .st-explore .lt-xp-goal-words {
+    font-size: 1rem;
+  }
+}
+
+/* "All captions": the strip becomes the list it always was. */
+.lt-clip-live[data-text] .lt-beats {
+  display: block;
+  padding-left: 1.6em;
+  list-style: decimal;
+}
+.lt-clip-live[data-text] .lt-beat {
+  visibility: visible !important;
+}
+.lt-clip-live[data-text] .lt-beat + .lt-beat {
+  margin-top: var(--lt-space-4);
+}
+.lt-clip-live[data-text] .lt-beat > .lt-predict {
+  display: block;
+  margin: 0 0 var(--lt-space-3);
+}
+.lt-clip-live[data-text] .lt-cap {
+  display: block;
+  text-align: left;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* ----- the controls */
+.st-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lt-space-2) var(--lt-space-4);
+  padding: var(--lt-space-2) max(var(--lt-space-3), calc((100% - 80rem) / 2 + var(--lt-space-4))) var(--lt-space-3);
+  background: var(--st-field-deep);
+  color: var(--lt-ink);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-xs);
+}
+.st-transport {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.st-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--lt-ink);
+  cursor: pointer;
+}
+.st-btn:hover {
+  background: var(--st-grain);
+}
+.st-btn:focus-visible {
+  border-radius: 50%;
+}
+.st-btn[aria-disabled="true"] {
+  color: var(--lt-ink-3);
+  opacity: 0.55;
+  cursor: default;
+}
+.st-btn[aria-disabled="true"]:hover {
+  background: transparent;
+}
+.st-play {
+  width: 2.875rem;
+  height: 2.875rem;
+  margin-inline: 4px;
+  background: var(--lt-accent);
+  color: var(--lt-accent-ink);
+}
+.st-play:hover {
+  background: var(--lt-ink);
+}
+.st-play .lt-icon {
+  grid-area: 1 / 1;
+}
+.st-i-pause,
+.st-i-replay,
+[data-state="playing"] .st-i-play,
+[data-state="ended"] .st-i-play {
+  visibility: hidden;
+}
+[data-state="playing"] .st-i-pause,
+[data-state="ended"] .st-i-replay {
+  visibility: visible;
+}
+.st-scrub {
+  position: relative;
+  flex: 1 1 10rem;
+  min-width: 8rem;
+  height: 2rem;
+}
+.st-marks {
+  position: absolute;
+  inset: 50% 8px auto;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: 2px;
+  background: var(--st-hair);
+  pointer-events: none;
+}
+.st-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: var(--lt-accent);
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
+.st-mark {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 12px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--lt-ink-2);
+}
+/* A prediction is a ring on the track until it has been answered, then a dot. */
+.st-mark-gate {
+  top: -5px;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border: 2px solid var(--lt-warn);
+  border-radius: 50%;
+  background: var(--st-field-deep);
+}
+.st-mark-gate[data-passed] {
+  background: var(--lt-warn);
+}
+.st-range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.st-range::-webkit-slider-runnable-track {
+  height: 2rem;
+  background: transparent;
+}
+.st-range::-moz-range-track {
+  height: 2rem;
+  background: transparent;
+}
+.st-range::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  margin-top: calc(1rem - 8px);
+  border: 2px solid var(--st-field-deep);
+  border-radius: 50%;
+  background: var(--lt-ink);
+  appearance: none;
+  -webkit-appearance: none;
+}
+.st-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--st-field-deep);
+  border-radius: 50%;
+  background: var(--lt-ink);
+}
+.st-range:focus-visible {
+  outline: var(--lt-focus);
+  outline-offset: 0;
+  border-radius: 999px;
+}
+.st-where {
+  min-width: 6.5em;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--lt-ink-2);
+}
+.st-opts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lt-space-2) var(--lt-space-4);
+}
+.st-speed {
+  display: inline-flex;
+  min-width: 0;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--st-hair);
+  border-radius: 999px;
+}
+.st-speed-option {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+.st-speed-option input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.st-speed-option span {
+  display: block;
+  min-width: 2.375rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 999px;
+  font-weight: 650;
+  line-height: 1.2;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--lt-ink-2);
+}
+.st-speed-option input:checked + span {
+  background: var(--lt-ink);
+  color: var(--st-on-solid);
+}
+.st-speed-option input:focus-visible + span {
+  outline: var(--lt-focus);
+  outline-offset: 2px;
+}
+.st-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: var(--lt-target);
+  font-weight: 600;
+  color: var(--lt-ink-2);
+  cursor: pointer;
+}
+.st-toggle input {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  accent-color: var(--lt-accent);
+  cursor: inherit;
+}
+@media (max-width: 47.99rem) {
+  .st-scrub {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .st-where {
+    margin-left: auto;
+    min-width: 0;
+  }
+  .st-opts {
+    order: 4;
+    flex-basis: 100%;
+    justify-content: space-between;
+    gap: var(--lt-space-2) var(--lt-space-3);
+  }
+  .st-speed-option span {
+    min-width: 2rem;
+    padding-inline: 0.3rem;
+  }
+  .st-strip {
+    min-height: 7.5rem;
+  }
+}
+
+/* ----- the text version, under the band */
+.st-under {
+  display: grid;
+  gap: var(--lt-space-3);
+  max-width: var(--lt-measure);
+  margin-top: var(--lt-space-4);
+}
+.st-under > .st-toggle {
+  justify-self: start;
+  min-height: 2rem;
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+}
+.st-about {
+  max-width: var(--lt-measure);
+}
+.st-about .lt-reveal-body > * + * {
+  margin-top: var(--lt-space-4);
+}
+.st-about .lt-clip-desc {
+  font-size: var(--lt-size-body);
+}
+
+/* ----- a custom frame's own panel (sliders, status, the line that says it is custom) sits in the band */
+.st-band > .lt-frame {
+  max-width: 80rem;
+  margin-inline: auto;
+  padding: var(--lt-space-3) max(var(--lt-space-4), var(--lt-gutter)) 0;
+}
+
+/* ----- stills for paper: made when a print starts, never shown on screen */
+.st-stills {
+  display: none;
+}
+
+/* ============================================================================================
+ * Paper: the same parts in the light palette, with ink outlines instead of light and shadow
+ * ============================================================================================ */
+.st-paper {
+  color-scheme: light;
+  overflow: hidden;
+  background: var(--st-field);
+  color: var(--lt-ink);
+  font-family: var(--lt-font-ui);
+}
+.st-paper .st-tint {
+  box-shadow: none;
+}
+.st-paper .st-stat > .st-tint,
+.st-paper .st-stat > .st-tint[data-tone] {
+  border-color: var(--lt-line-strong);
+}
+
+@media print {
+  .st-band {
+    color-scheme: light;
+    margin: 0 !important;
+    background: none;
+  }
+  .st-stage,
+  .st-controls,
+  .st-slate,
+  .st-bigplay,
+  .st-curtain {
+    display: none !important;
+  }
+  /* Explore on paper is what it was before anyone dragged: the prompt, where each slider starts and how far it goes, and the goal. */
+  .lt-clip-live .st-explore,
+  .lt-clip-live[data-exploring] .st-explore {
+    display: block;
+    max-width: none;
+    margin-top: 8pt;
+    padding: 6pt 8pt;
+    border: 0.5pt solid var(--lt-ink);
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    color: var(--lt-ink);
+    break-inside: avoid;
+  }
+  .lt-clip-live .st-explore > * + * {
+    margin-top: 4pt;
+  }
+  .st-explore .lt-explore-kicker {
+    padding: 0;
+    background: none;
+    color: var(--lt-ink);
+  }
+  .st-explore .lt-xp-control {
+    display: block;
+  }
+  .st-explore .lt-xp-now {
+    display: inline;
+  }
+  .st-explore .lt-xp-bounds {
+    display: inline;
+    color: var(--lt-ink);
+  }
+  .st-explore .lt-xp-bounds > .lt-xp-word {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    clip-path: none;
+  }
+  .st-xp-out,
+  .st-xp-slide,
+  .st-xp-mark,
+  .st-xp-done,
+  .st-explore .lt-xp-actions {
+    display: none !important;
+  }
+  .st-explore .lt-xp-goal,
+  .st-explore .lt-xp-goal[data-reached] {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+  .st-explore .lt-xp-goal-text {
+    display: block;
+  }
+  .st-explore .lt-xp-goal > details[hidden],
+  .lt-clip-live .lt-pick > details[hidden] {
+    display: block;
+  }
+  .lt-clip-live[data-exploring] .lt-beats {
+    display: block;
+  }
+  /* A custom frame prints the picture it is showing. */
+  .lt-clip[data-stage="frame"] .st-stage {
+    display: block !important;
+    background: none;
+  }
+  .st-grain,
+  .lt-clip-live .lt-prov {
+    display: none;
+  }
+  .st-strip {
+    display: block;
+    min-height: 0;
+    padding: 0;
+    background: none;
+  }
+  .st-stills {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr));
+    gap: 10pt;
+    margin: 8pt 0 12pt;
+  }
+  .st-still {
+    position: relative;
+    break-inside: avoid;
+    border: 0.5pt solid var(--lt-ink);
+    overflow: hidden;
+  }
+  .st-still > .st-view {
+    max-width: none;
+    min-height: 0;
+    margin: 0 auto;
+    /* Built 600 wide; two to a row on A4 leaves each about 330. */
+    zoom: 0.54;
+  }
+  .st-still-n {
+    position: absolute;
+    left: 5pt;
+    top: 3pt;
+    font-family: var(--lt-font-ui);
+    font-size: 9pt;
+    font-weight: 700;
+    color: var(--lt-ink);
+  }
+  .lt-clip-live .lt-beats {
+    display: block;
+    max-width: none;
+    padding-left: 1.6em;
+    list-style: decimal;
+  }
+  .lt-clip-live .lt-beat {
+    visibility: visible !important;
+    break-inside: avoid;
+  }
+  .lt-clip-live .lt-beat + .lt-beat {
+    margin-top: 8pt;
+  }
+  .lt-clip-live .lt-beat > .lt-predict {
+    display: block;
+    border: 0.5pt solid var(--lt-ink);
+    background: none;
+  }
+  .lt-clip-live .lt-cap,
+  .lt-clip-live[data-asking] .lt-cap {
+    display: block;
+    font-size: inherit;
+    text-align: left;
+    opacity: 1 !important;
+    transform: none !important;
+    color: var(--lt-ink);
+  }
+  .st-under {
+    max-width: none;
+  }
+  .st-under > .st-toggle {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .st-band {
+    color-scheme: light dark;
+    border-block: 1px solid CanvasText;
+  }
+  .st-grain {
+    display: none;
+  }
+  .st-tint,
+  .st-bar-fill,
+  .st-mark,
+  .st-fill,
+  .st-xp-fill {
+    forced-color-adjust: none;
+  }
+  .st-tap-mark {
+    border-color: ButtonText;
+  }
+  .st-explore .lt-xp-range::-webkit-slider-thumb {
+    border-color: Highlight;
+    background: ButtonText;
+  }
+}
+
+/* ============================================================================================
+ * The title card: a lesson made of clips opens on it. It is the page's own header, restyled.
+ * ============================================================================================ */
+.st-start {
+  display: none;
+}
+@media screen {
+  .lt-clips:not(.lt-compact) .lt-top {
+    color-scheme: dark;
+    row-gap: 0;
+    padding-bottom: var(--lt-space-7);
+    /*
+     * The field runs to both edges of the window. A border image may be drawn outside its box
+     * (the outset) without becoming something the page can scroll to, and the gradient is laid
+     * over box and outset together, so the light has no seam where the header's own box ends.
+     */
+    border-image: radial-gradient(ellipse 52rem 30rem at calc(50% - 16rem) 46%, var(--st-field-lit), var(--st-field) 78%) fill 0 / 0 / 0 100vw;
+    /* The same field as a plain colour under it: what the words are measured against. */
+    background-color: var(--st-field);
+    color: var(--lt-ink);
+  }
+  .lt-clips:not(.lt-compact) .lt-top > .lt-title,
+  .lt-clips:not(.lt-compact) .lt-top > .lt-meta,
+  .lt-clips:not(.lt-compact) .lt-top > .lt-objectives,
+  .lt-clips:not(.lt-compact) .lt-top > .lt-resume,
+  .lt-clips:not(.lt-compact) .lt-top > .st-start {
+    justify-self: start;
+    max-width: 46rem;
+  }
+  .lt-clips:not(.lt-compact) .lt-title {
+    margin-top: clamp(2rem, 7vw, 4.5rem);
+    font-family: var(--lt-font-ui);
+    font-size: clamp(2.25rem, 1.3rem + 4.6vw, 4.75rem);
+    font-weight: 780;
+    line-height: 1.02;
+    letter-spacing: -0.04em;
+  }
+  .lt-clips:not(.lt-compact) .lt-meta {
+    margin-top: var(--lt-space-5);
+    font-size: var(--lt-size-s);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--lt-ink-2);
+  }
+  .lt-clips:not(.lt-compact) .lt-objectives {
+    position: relative;
+    margin-top: var(--lt-space-6);
+    padding-top: var(--lt-space-5);
+    border-top: 0;
+    font-family: var(--lt-font-ui);
+    font-size: 1.0625rem;
+    line-height: 1.45;
+  }
+  /* The rule over the objectives is drawn, not just there. */
+  .lt-clips:not(.lt-compact) .lt-objectives::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--lt-accent);
+    transform-origin: 0 50%;
+  }
+  .lt-clips:not(.lt-compact) .lt-objectives li + li {
+    margin-top: var(--lt-space-3);
+  }
+  .lt-clips:not(.lt-compact) .lt-objectives li::before {
+    top: 0.12em;
+    font-weight: 750;
+  }
+  .lt-clips:not(.lt-compact) .st-start {
+    display: inline-flex;
+    grid-column: 1 / -1;
+    width: auto;
+    min-height: 3.25rem;
+    margin-top: var(--lt-space-6);
+    padding-inline: 1.3rem 1.7rem;
+    border: 0;
+    border-radius: 999px;
+    font-size: 1.0625rem;
+    font-weight: 750;
+    letter-spacing: -0.01em;
+    box-shadow: 0 0 0 8px var(--st-halo);
+  }
+  .lt-clips:not(.lt-compact) .st-start:hover {
+    background: var(--lt-ink);
+  }
+  .lt-clips:not(.lt-compact) .lt-resume {
+    background: var(--st-well);
+  }
+  .lt-clips:not(.lt-compact) .st-tw {
+    display: inline-block;
+  }
+  .lt-js.lt-clips:not(.lt-compact) .lt-rail {
+    margin-top: 0;
+    padding-top: var(--lt-space-5);
+  }
+  /* Where there is room the objectives stand beside the title. */
+  @media (min-width: 62rem) {
+    .lt-clips:not(.lt-compact) .lt-top {
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      column-gap: var(--lt-space-8);
+      align-items: start;
+    }
+    .lt-clips:not(.lt-compact) .lt-top > .lt-tools {
+      justify-self: end;
+    }
+    .lt-clips:not(.lt-compact) .lt-top > .lt-title,
+    .lt-clips:not(.lt-compact) .lt-top > .lt-meta,
+    .lt-clips:not(.lt-compact) .lt-top > .st-start {
+      grid-column: 1;
+    }
+    .lt-clips:not(.lt-compact) .lt-top > .lt-title {
+      grid-row: 2;
+    }
+    .lt-clips:not(.lt-compact) .lt-top > .lt-meta {
+      grid-row: 3;
+    }
+    .lt-clips:not(.lt-compact) .lt-top > .st-start {
+      grid-row: 4;
+    }
+    .lt-clips:not(.lt-compact) .lt-top > .lt-objectives {
+      grid-column: 2;
+      grid-row: 2 / span 3;
+      align-self: end;
+      margin-top: clamp(2rem, 7vw, 4.5rem);
+    }
+    .lt-clips:not(.lt-compact) .lt-top > .lt-resume {
+      grid-row: 5;
+    }
+  }
+}
+
+/* ============================================================================================
+ * The two entrances that the stylesheet plays: the title card, once, and the wipe a clip arrives
+ * behind. Both end; neither repeats; neither exists for a learner who asked for less motion.
+ * ============================================================================================ */
+.st-curtain {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+.st-curtain > span {
+  position: absolute;
+  inset: 0;
+}
+.st-curtain > span:first-child {
+  background: var(--st-field-lit);
+}
+.st-curtain > span:last-child {
+  background: var(--lt-accent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .st-bigplay {
+    transition: opacity 280ms cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  /*
+   * The hand-over, played once as the stage becomes the learner's: the rim of the stage lights,
+   * the panel rises into the caption's place, and the slider's thumb beckons twice. After that
+   * nothing here moves unless the learner moves it.
+   */
+  .lt-clip-live[data-exploring] .st-stage {
+    animation: st-handover 1100ms cubic-bezier(0.33, 1, 0.68, 1) both;
+  }
+  .lt-clip-live[data-exploring] .st-live {
+    animation: st-xp-rise 420ms 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .lt-clip-live[data-exploring] .st-explore {
+    animation: st-xp-rise 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .lt-clip-live[data-exploring] .st-xp-halo {
+    animation: st-xp-beckon 1100ms 520ms cubic-bezier(0.33, 1, 0.68, 1) 2 both;
+  }
+  .st-xp-halo {
+    transition: box-shadow 160ms cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  .st-explore .lt-xp-range::-webkit-slider-thumb {
+    transition: transform 140ms cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  .st-explore .lt-xp-range:active::-webkit-slider-thumb {
+    transform: scale(1.14);
+  }
+  /* The goal lands: the ring fills, the tick is drawn, one ring leaves the box, and the reason rises in. No confetti. */
+  .lt-clip-live[data-exploring][data-won] .st-stage {
+    animation: st-won 1300ms cubic-bezier(0.33, 1, 0.68, 1) both;
+  }
+  .lt-xp-goal[data-reached] {
+    animation: st-xp-land 900ms cubic-bezier(0.33, 1, 0.68, 1) both;
+  }
+  .lt-xp-goal[data-reached] .st-xp-ring {
+    animation: st-xp-pop 520ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  }
+  .lt-xp-goal[data-reached] .st-xp-tick {
+    transition: stroke-dashoffset 380ms 180ms cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  .lt-xp-goal[data-reached] .st-xp-done {
+    animation: st-xp-rise 460ms 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .st-tap[data-state] > .st-tap-mark {
+    animation: st-tap-land 420ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  }
+  .st-enter > .st-curtain {
+    animation: st-curtain 900ms linear both;
+  }
+  .st-enter > .st-curtain > span:first-child {
+    animation: st-wipe 640ms 160ms cubic-bezier(0.65, 0, 0.35, 1) both;
+  }
+  .st-enter > .st-curtain > span:last-child {
+    animation: st-wipe 600ms cubic-bezier(0.65, 0, 0.35, 1) both;
+  }
+  @keyframes st-curtain {
+    from {
+      visibility: visible;
+    }
+    to {
+      visibility: hidden;
+    }
+  }
+  @keyframes st-wipe {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(101%);
+    }
+  }
+
+  @media screen {
+    .lt-clips:not(.lt-compact):not(.lt-card-done) .st-tw {
+      animation: st-rise 620ms calc(140ms + var(--st-i, 0) * 70ms) cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .lt-clips:not(.lt-compact):not(.lt-card-done) .lt-meta {
+      animation: st-fade 500ms 620ms cubic-bezier(0.33, 1, 0.68, 1) both;
+    }
+    .lt-clips:not(.lt-compact):not(.lt-card-done) .lt-objectives::before {
+      animation: st-draw 700ms 560ms cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+    .lt-clips:not(.lt-compact):not(.lt-card-done) .lt-objectives > .lt-label {
+      animation: st-fade 460ms 760ms cubic-bezier(0.33, 1, 0.68, 1) both;
+    }
+    .lt-clips:not(.lt-compact):not(.lt-card-done) .lt-objectives li {
+      animation: st-rise-s 560ms calc(860ms + var(--st-i, 0) * 90ms) cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .lt-clips:not(.lt-compact):not(.lt-card-done) .st-start {
+      animation: st-rise-s 560ms 1250ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    @keyframes st-rise {
+      from {
+        opacity: 0;
+        transform: translateY(0.42em);
+      }
+    }
+    @keyframes st-rise-s {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+    }
+    @keyframes st-fade {
+      from {
+        opacity: 0;
+      }
+    }
+    @keyframes st-draw {
+      from {
+        transform: scaleX(0);
+      }
+    }
+  }
+}
+@keyframes st-handover {
+  from {
+    box-shadow:
+      inset 0 0 0 2px transparent,
+      inset 0 0 0 transparent;
+  }
+  35% {
+    box-shadow:
+      inset 0 0 0 3px var(--lt-accent),
+      inset 0 0 110px var(--st-glow);
+  }
+  to {
+    box-shadow:
+      inset 0 0 0 2px var(--lt-accent),
+      inset 0 0 44px var(--st-halo);
+  }
+}
+@keyframes st-won {
+  from {
+    box-shadow:
+      inset 0 0 0 2px var(--lt-accent),
+      inset 0 0 44px var(--st-halo);
+  }
+  30% {
+    box-shadow:
+      inset 0 0 0 4px var(--lt-good),
+      inset 0 0 130px var(--st-halo-good);
+  }
+  to {
+    box-shadow:
+      inset 0 0 0 2px var(--lt-good),
+      inset 0 0 44px var(--st-halo-good);
+  }
+}
+@keyframes st-xp-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes st-xp-beckon {
+  from {
+    box-shadow: 0 0 0 0 var(--st-glow);
+  }
+  to {
+    box-shadow: 0 0 0 18px transparent;
+  }
+}
+@keyframes st-xp-land {
+  from {
+    box-shadow: 0 0 0 0 var(--st-halo-good);
+  }
+  to {
+    box-shadow: 0 0 0 16px transparent;
+  }
+}
+@keyframes st-xp-pop {
+  from {
+    transform: scale(0.5);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes st-tap-land {
+  from {
+    transform: scale(1.12);
+  }
+  to {
+    transform: none;
+  }
+}

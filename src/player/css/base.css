@@ -1,0 +1,336 @@
+/*
+ * Base: the page's own typography and the small set of shared pieces (buttons, labels, reveals,
+ * tables, form fields, callouts) that the shell, figures, questions and steps all draw with.
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* An author rule that sets display would otherwise show something marked hidden. */
+[hidden] {
+  display: none !important;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Room above a focused control, so nothing at the top edge covers it (WCAG 2.4.11). */
+  scroll-padding-top: var(--lt-space-5);
+}
+
+body {
+  margin: 0;
+  background: var(--lt-bg);
+  color: var(--lt-ink);
+  font-family: var(--lt-font-prose);
+  font-size: var(--lt-size-body);
+  line-height: var(--lt-leading);
+  overflow-wrap: break-word;
+  font-kerning: normal;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: var(--lt-font-prose);
+  font-weight: 600;
+  line-height: var(--lt-leading-tight);
+  letter-spacing: -0.011em;
+  text-wrap: balance;
+}
+h3 {
+  font-size: var(--lt-size-h3);
+  letter-spacing: 0;
+}
+
+p,
+ul,
+ol,
+dl,
+blockquote,
+figure {
+  margin: 0;
+}
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: var(--lt-accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+strong {
+  font-weight: 650;
+}
+
+code,
+pre,
+kbd {
+  font-family: var(--lt-font-mono);
+  font-size: 0.86em;
+  font-variant-numeric: normal;
+}
+:not(pre) > code {
+  padding: 0.1em 0.32em;
+  border: 1px solid var(--lt-line);
+  border-radius: var(--lt-radius-s);
+  background: var(--lt-sunken);
+  /* A long identifier must not push a 320px page sideways. */
+  overflow-wrap: anywhere;
+}
+
+math {
+  font-size: 1.04em;
+}
+math[display="block"] {
+  margin-block: var(--lt-space-2);
+  /* A wide expression scrolls inside its own box instead of widening the page. */
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+:focus-visible {
+  outline: var(--lt-focus);
+  outline-offset: 2px;
+  border-radius: var(--lt-radius-s);
+}
+/* Headings and <main> take focus only so a screen reader starts reading there; they are not controls. */
+[tabindex="-1"]:focus {
+  outline: none;
+}
+
+/* Visually hidden, still read aloud. */
+.lt-vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.lt-icon {
+  flex: none;
+  display: block;
+}
+
+/* A small-capitals label: "Analogy", "Step 2 of 5", a field name. */
+.lt-label {
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-xs);
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: var(--lt-tracking-caps);
+  text-transform: uppercase;
+  color: var(--lt-ink-2);
+}
+
+/* Buttons. One primary action per scene at most; everything else is quiet. */
+.lt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lt-space-2);
+  min-height: 2.75rem;
+  padding: 0.55rem 1.05rem;
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  background: var(--lt-surface);
+  color: var(--lt-ink);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+.lt-btn:hover {
+  border-color: var(--lt-ink);
+}
+.lt-btn-primary {
+  border-color: var(--lt-accent);
+  background: var(--lt-accent);
+  color: var(--lt-accent-ink);
+}
+.lt-btn-primary:hover {
+  border-color: var(--lt-ink);
+}
+.lt-btn-quiet {
+  background: transparent;
+}
+.lt-btn-small {
+  min-height: 2.25rem;
+  padding: 0.35rem 0.8rem;
+}
+/* Still focusable and still readable; it only stops looking pressable. */
+.lt-btn[aria-disabled="true"],
+.lt-btn:disabled {
+  border-color: var(--lt-line);
+  border-style: dashed;
+  background: transparent;
+  color: var(--lt-ink-3);
+  cursor: default;
+}
+
+/* A native disclosure: "Show the takeaway", "Show the answer". */
+.lt-reveal {
+  border: 1px solid var(--lt-line);
+  border-radius: var(--lt-radius);
+  background: var(--lt-surface);
+}
+.lt-reveal > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--lt-space-2);
+  min-height: 2.75rem;
+  padding: var(--lt-space-2) var(--lt-space-4);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  font-weight: 600;
+  color: var(--lt-accent);
+  cursor: pointer;
+  list-style: none;
+}
+.lt-reveal > summary::-webkit-details-marker {
+  display: none;
+}
+.lt-reveal > summary::before {
+  content: "";
+  flex: none;
+  width: 0.5em;
+  height: 0.5em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-0.12em) rotate(-45deg);
+}
+.lt-reveal[open] > summary::before {
+  transform: translateY(-0.2em) rotate(45deg);
+}
+.lt-reveal[open] > summary {
+  border-bottom: 1px solid var(--lt-line);
+}
+.lt-reveal-body {
+  padding: var(--lt-space-4);
+}
+.lt-reveal-body > * + * {
+  margin-top: var(--lt-space-3);
+}
+
+/*
+ * Tables scroll inside their wrapper when they must, so the page itself never scrolls sideways.
+ * Anything that scrolls must be reachable by keyboard: give the wrapper tabindex="0", role="region"
+ * and a label in the markup.
+ */
+.lt-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.lt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.lt-table caption {
+  padding-bottom: var(--lt-space-2);
+  text-align: left;
+  font-weight: 600;
+}
+.lt-table th,
+.lt-table td {
+  padding: var(--lt-space-2) var(--lt-space-3);
+  border-bottom: 1px solid var(--lt-line);
+  text-align: left;
+  vertical-align: top;
+}
+.lt-table thead th {
+  border-bottom: 1px solid var(--lt-line-strong);
+  font-weight: 650;
+}
+.lt-table tbody th {
+  font-weight: 600;
+}
+
+/* Text fields. */
+.lt-field {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--lt-line-strong);
+  border-radius: var(--lt-radius);
+  background: var(--lt-surface);
+  color: var(--lt-ink);
+  font: inherit;
+  font-family: var(--lt-font-ui);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+textarea.lt-field {
+  resize: vertical;
+}
+
+/* A boxed message. The tone is stated in words inside it; the colour and the border only echo it. */
+.lt-callout {
+  padding: var(--lt-space-3) var(--lt-space-4);
+  border: 1px solid var(--lt-line-strong);
+  border-left-width: 4px;
+  border-radius: var(--lt-radius-s);
+  background: var(--lt-surface);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.5;
+}
+.lt-callout[data-tone="good"] {
+  border-color: var(--lt-good);
+  background: var(--lt-good-soft);
+}
+.lt-callout[data-tone="bad"] {
+  border-color: var(--lt-bad);
+  background: var(--lt-bad-soft);
+}
+.lt-callout[data-tone="warn"] {
+  border-color: var(--lt-warn);
+  background: var(--lt-warn-soft);
+}
+.lt-callout:empty:not([role="status"]) {
+  display: none;
+}
+/*
+ * A status region is in the page before it says anything: one that only appears together with
+ * its first words is not reliably announced. So an empty one is never hidden. It gives up its
+ * box instead, and takes no room.
+ */
+.lt-callout[role="status"]:empty {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lt-btn,
+  .lt-chip,
+  .lt-tool,
+  a {
+    transition:
+      background-color var(--lt-speed) ease,
+      border-color var(--lt-speed) ease,
+      color var(--lt-speed) ease;
+  }
+  .lt-reveal > summary::before {
+    transition: transform var(--lt-speed) ease;
+  }
+}

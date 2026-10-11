@@ -1,0 +1,77 @@
+/*
+ * Blocks: the units of prose. The look follows what a block may claim.
+ *   claim    body text that ends in source chips
+ *   quote    the source's own words, set off by an accent rule and attributed
+ *   analogy, example    boxed and labelled in words as the agent's own
+ *   framing  body text; as the opening line of a scene it is set as a lede
+ */
+.lt-block + .lt-block {
+  margin-top: var(--lt-space-5);
+}
+.lt-block > p + p {
+  margin-top: var(--lt-space-3);
+}
+
+.lt-prose > .lt-framing:first-child > p {
+  font-size: var(--lt-size-lede);
+  line-height: 1.45;
+}
+
+.lt-quote {
+  padding-left: var(--lt-space-5);
+  border-left: 3px solid var(--lt-accent);
+}
+.lt-quote blockquote {
+  font-size: var(--lt-size-lede);
+  line-height: 1.45;
+  quotes: "\201C" "\201D";
+}
+.lt-quote blockquote p::before {
+  content: open-quote;
+}
+.lt-quote blockquote p::after {
+  content: close-quote;
+}
+.lt-quote .lt-quote-from {
+  margin-top: var(--lt-space-2);
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  color: var(--lt-ink-2);
+}
+.lt-quote cite {
+  font-style: normal;
+}
+.lt-quote-host::before {
+  content: " · ";
+}
+
+.lt-note {
+  padding: var(--lt-space-4) var(--lt-space-5);
+  border: 1px solid var(--lt-line);
+  border-radius: var(--lt-radius);
+  background: var(--lt-surface);
+}
+.lt-note > .lt-label {
+  margin-bottom: var(--lt-space-2);
+}
+.lt-note > p + p {
+  margin-top: var(--lt-space-3);
+}
+.lt-limits,
+.lt-based {
+  font-family: var(--lt-font-ui);
+  font-size: var(--lt-size-s);
+  line-height: 1.5;
+  color: var(--lt-ink-2);
+}
+.lt-limits {
+  padding-top: var(--lt-space-3);
+  border-top: 1px solid var(--lt-line);
+}
+.lt-limits-label {
+  font-weight: 650;
+  color: var(--lt-ink);
+}
+.lt-example {
+  font-variant-numeric: lining-nums tabular-nums;
+}

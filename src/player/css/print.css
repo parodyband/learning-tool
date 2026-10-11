@@ -1,0 +1,162 @@
+/*
+ * Print: the whole lesson as one document. Every scene, then every source with its address.
+ * Controls and anything that only makes sense on a screen are left out. Cues that matter are
+ * borders and words, because backgrounds are often not printed.
+ *
+ * A source chip is the exception among the controls: its number is what ties a claim to an entry
+ * in the printed source list, so it stays, as "[3]" in the line of text.
+ */
+@media print {
+  :root {
+    color-scheme: light;
+    --lt-bg: #ffffff;
+    --lt-surface: #ffffff;
+    --lt-sunken: #ffffff;
+    --lt-measure: 100%;
+    --lt-wide: 100%;
+    --lt-gutter: 0px;
+    --lt-shadow: none;
+  }
+  body {
+    font-size: 11pt;
+  }
+
+  .lt-skip,
+  .lt-tools,
+  .lt-rail,
+  .lt-audio,
+  .lt-pager,
+  .lt-resume,
+  .lt-foot-progress,
+  .lt-copy,
+  .lt-sources-close,
+  .lt-source-actions,
+  [popover] {
+    display: none !important;
+  }
+
+  .lt-chip,
+  .lt-chip-open {
+    display: inline;
+    min-width: 0;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    color: #000;
+    font: inherit;
+    font-size: 0.85em;
+    font-variant-numeric: lining-nums;
+    vertical-align: baseline;
+    appearance: none;
+  }
+  .lt-chip::before {
+    content: "[";
+  }
+  .lt-chip::after {
+    content: "]";
+  }
+  .lt-chip + .lt-chip {
+    margin-left: 0;
+  }
+
+  /* Every scene, whatever the player was showing. */
+  .lt-scene[hidden] {
+    display: block !important;
+  }
+  .lt-scene {
+    max-width: none;
+    padding-top: 18pt;
+    animation: none !important;
+  }
+  .lt-scene + .lt-scene {
+    margin-top: 18pt;
+    border-top: 0.5pt solid #000;
+  }
+  .lt-scene-head,
+  .lt-block,
+  .lt-source-item,
+  .lt-takeaway {
+    break-inside: avoid;
+  }
+  .lt-scene-head {
+    break-after: avoid;
+  }
+
+  /* The title block in full, even if the player had shrunk it. */
+  .lt-compact .lt-brand,
+  .lt-compact .lt-meta,
+  .lt-compact .lt-objectives {
+    display: block;
+  }
+  .lt-top,
+  .lt-compact .lt-top {
+    display: block;
+  }
+  .lt-title,
+  .lt-compact .lt-title {
+    margin-top: 12pt;
+    max-width: none;
+    overflow: visible;
+    font-family: var(--lt-font-prose);
+    font-size: 22pt;
+    font-weight: 600;
+    color: #000;
+    white-space: normal;
+    text-wrap: balance;
+  }
+
+  .lt-split {
+    display: block;
+  }
+  .lt-figure-col {
+    position: static !important;
+    margin-top: 12pt;
+  }
+
+  /* Folded content is part of the document on paper. */
+  details.lt-reveal > *:not(summary) {
+    display: block;
+  }
+  details.lt-reveal::details-content {
+    content-visibility: visible;
+    display: block;
+  }
+
+  /* The sources list, as the last section, with each address written out. */
+  .lt-sources {
+    position: static !important;
+    display: block !important;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    margin: 24pt 0 0;
+    border: 0;
+    box-shadow: none;
+    break-before: page;
+  }
+  .lt-sources-inner {
+    padding: 0;
+  }
+  .lt-sources-head {
+    position: static;
+    margin: 0;
+    padding: 0 0 6pt;
+  }
+  .lt-source-open a {
+    color: #000;
+    text-decoration: none;
+  }
+  .lt-out {
+    display: none;
+  }
+  .lt-source-url {
+    color: #000;
+  }
+  .lt-foot {
+    max-width: none;
+    color: #000;
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "learning-tool",
+  "displayName": "Learning Tool",
+  "version": "0.3.0",
+  "description": "Learn anything from your own agent: it researches the topic and builds a short interactive lesson of animated clips, predictions and sliders you can drag, with a source behind every claim. One offline page.",
+  "author": {
+    "name": "Austin Crane"
+  },
+  "license": "MIT",
+  "keywords": [
+    "learning",
+    "lesson",
+    "teaching",
+    "education",
+    "citations",
+    "mcp"
+  ],
+  "userConfig": {
+    "elevenlabs_api_key": {
+      "type": "string",
+      "title": "ElevenLabs API key (optional)",
+      "description": "Leave empty for text-only lessons. If you set a key, the narration text of each lesson you publish is sent to ElevenLabs (elevenlabs.io) to add spoken audio, which uses your ElevenLabs credits.",
+      "sensitive": true
+    }
+  },
+  "repository": "https://github.com/parodyband/learning-tool",
+  "homepage": "https://github.com/parodyband/learning-tool"
+}
