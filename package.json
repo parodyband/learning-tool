@@ -1,6 +1,6 @@
 {
   "name": "learning-tool",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "An agent-native way to learn anything: a skill, a local MCP server, and a self-contained interactive lesson player.",
   "type": "module",
   "private": true,

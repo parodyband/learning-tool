@@ -89,9 +89,9 @@ describe('what voice.md says is sent for a clip', async () => {
   // Until the narration module learns about clips it returns nothing for them.
   const knowsClips = segments.some((s) => /\.beat1$/.test(s.id));
 
-  it('says a clip sends the caption of each beat, one request per beat, and never a prediction or an explore', () => {
+  it('says a clip sends each beat\'s spoken script or caption, one request per beat, and never a prediction or an explore', () => {
     const text = flat('voice.md');
-    expect(text).toMatch(/\| A clip \| The caption of each beat, one request per beat\./);
+    expect(text).toMatch(/\| A clip \| For each beat, its `say` when you wrote one, otherwise its caption, one request per beat\./);
     expect(text).toMatch(/A prediction's prompt and its replies\./);
     expect(text).toMatch(/The words of an explore: its prompt, its sliders and its goal\./);
     expect(text).toMatch(/What is on a stage, clip descriptions and a custom frame's code\./);

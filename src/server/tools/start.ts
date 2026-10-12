@@ -19,7 +19,7 @@ export function voiceStatus(deps: ServerDeps): { enabled: boolean; note: string 
   if (deps.voice.config) {
     return {
       enabled: true,
-      note: 'Voice is on. publish_lesson will send what the lesson says aloud (the caption of every beat, question prompts and takeaways) to ElevenLabs and embed the audio, one clip per caption, so each is heard as its picture moves. Pass "voice": false to publish_lesson to leave it out. A voice failure never blocks publishing.',
+      note: 'Voice is on. publish_lesson will send what the lesson says aloud (the caption of every beat, question prompts and takeaways) to ElevenLabs and embed the audio, one clip per caption, so each is heard as its picture moves. Pass "voice": false to publish_lesson to leave it out. A voice failure never blocks publishing. Where a caption holds something a voice would read wrongly (an identifier such as memcpy, an abbreviation, a symbol, a formula), add "say" to that beat: the same sentence written the way it should be spoken ("mem copy"). The page shows the caption; the voice reads "say".',
     };
   }
   const never = 'Never ask for or accept an API key in chat.';

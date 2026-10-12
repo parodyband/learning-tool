@@ -329,6 +329,12 @@ export const Gate = z.union([Predict, PickGate]);
 
 export const Beat = z.strictObject({
   caption: Block,
+  /**
+   * How to say the caption aloud, when reading it as written would go wrong: an identifier, an
+   * abbreviation, a symbol or a formula. The same sentence, respelt for the ear ("memcpy" as "mem
+   * copy"). The page always shows the caption; only the voice uses this.
+   */
+  say: clipText(400).optional(),
   do: z.array(Action).max(C.actionsPerBeat).default([]),
   gate: Gate.optional(),
   at: FrameTime.optional(),

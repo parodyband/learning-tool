@@ -216,7 +216,7 @@ learning-tool@learning-tool` shows whether it is set.
 |---|---|---|
 | `LEARNING_TOOL_ELEVENLABS_API_KEY` | Your key. Voice is off without it. The generic `ELEVENLABS_API_KEY` is deliberately not read | unset |
 | `LEARNING_TOOL_ELEVENLABS_VOICE_ID` | The voice to use | chosen from your account's voices |
-| `LEARNING_TOOL_ELEVENLABS_MODEL` | The model to use | `eleven_multilingual_v2` |
+| `LEARNING_TOOL_ELEVENLABS_MODEL` | The model to use | `eleven_v4_turbo` |
 | `LEARNING_TOOL_VOICE_MAX_CHARS` | The most characters one publish may send | `12000` |
 
 Your agent will never ask for the key and is instructed to refuse one pasted into the chat. If voice

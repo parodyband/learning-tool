@@ -232,7 +232,7 @@ describe('slow answers and deadlines', () => {
     w.stub.tts = (req) => (/^(One|Two)\./.test(text(req)) ? { kind: 'audio' } : { kind: 'hang' });
     const lesson = segs('One.', 'Two.', 'Three.', 'Four.', 'Five.', 'Six.');
     const started = Date.now();
-    const cut = await w.synth(lesson, withGeorge(), { deadlineMs: 400, tuning: { backoffMs: [2, 4], requestTimeoutMs: 30_000 } });
+    const cut = await w.synth(lesson, withGeorge(), { deadlineMs: 400, tuning: { backoffMs: [2, 4], requestTimeoutMs: 30_000, concurrency: 2, maxConcurrency: 2 } });
     const elapsed = Date.now() - started;
     expect(elapsed).toBeGreaterThanOrEqual(350);
     expect(elapsed).toBeLessThan(1200);
@@ -260,7 +260,7 @@ describe('slow answers and deadlines', () => {
   it('reports VOICE_TIMEOUT when the voice listing uses up the deadline', async () => {
     w.stub.voices = () => ({ kind: 'hang' });
     const started = Date.now();
-    const { report } = await w.synth(segs('One.', 'Two.'), configure(), { deadlineMs: 250, tuning: { backoffMs: [2, 4], requestTimeoutMs: 30_000 } });
+    const { report } = await w.synth(segs('One.', 'Two.'), configure(), { deadlineMs: 250, tuning: { backoffMs: [2, 4], requestTimeoutMs: 30_000, concurrency: 2, maxConcurrency: 2 } });
     expect(Date.now() - started).toBeLessThan(1000);
     expect(report.code).toBe('VOICE_TIMEOUT');
     expect(report.segments.map((s) => s.status)).toEqual(['skipped', 'skipped']);
@@ -272,7 +272,7 @@ describe('slow answers and deadlines', () => {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 60);
     const started = Date.now();
-    const { report } = await w.synth(segs('One.', 'Two.', 'Three.'), withGeorge(), { signal: controller.signal, tuning: { backoffMs: [2, 4], requestTimeoutMs: 30_000 } });
+    const { report } = await w.synth(segs('One.', 'Two.', 'Three.'), withGeorge(), { signal: controller.signal, tuning: { backoffMs: [2, 4], requestTimeoutMs: 30_000, concurrency: 2, maxConcurrency: 2 } });
     expect(Date.now() - started).toBeLessThan(1000);
     expect(report.code).toBe('VOICE_TIMEOUT');
     expect(report.segments.map((s) => s.status)).toEqual(['failed', 'failed', 'skipped']);

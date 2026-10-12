@@ -30,6 +30,22 @@ Three things to be straight about:
 - **The audio is embedded**, so a lesson with voice still works offline, and is several megabytes
   larger.
 
+## Writing for the ear: `say`
+
+A voice reads what it is given, and some captions do not survive that: `memcpy`, `O(n log n)`,
+`std::vector`, `≥`, an abbreviation it would spell out or a name it would mangle. When voice is on
+(start_lesson says so) and a caption holds something like that, add `say` to the beat: the same
+sentence written the way a person would say it.
+
+```
+caption: { "type": "claim", "text": "`memcpy` copies n bytes and does not check for overlap.", "cites": ["e2"] }
+say:     "mem copy copies n bytes and does not check for overlap."
+```
+
+The page always shows the caption; only the voice uses `say`. Keep it the same sentence: respell,
+do not rephrase, and add nothing the caption does not state. Leave `say` out when the caption reads
+aloud correctly as it is, which is most of the time, and when voice is off.
+
 ## What is sent, and when
 
 **When.** Only during `publish_lesson`, only when a key is configured, and not if you pass
@@ -43,7 +59,7 @@ per segment:
 
 | Segment | Text sent |
 |---|---|
-| A clip | The caption of each beat, one request per beat. An analogy is followed by "Where this comparison breaks down:" and its limits |
+| A clip | For each beat, its `say` when you wrote one, otherwise its caption, one request per beat. An analogy is followed by "Where this comparison breaks down:" and its limits |
 | A checkpoint | The question's prompt |
 | The recap | The takeaways |
 
@@ -66,6 +82,11 @@ that was cut short is finished by publishing again.
 **What ElevenLabs keeps.** By its documentation when this was written, the text and audio stay in the
 account's history unless the learner deletes them there. That is the learner's account and their
 choice; say so if they ask about privacy.
+
+**How fast.** Every clip is requested at publish, several at once (as many as the learner's
+ElevenLabs plan allows, up to twenty), so the audio is complete before the learner opens the lesson
+and nothing is fetched while it plays. If ElevenLabs refuses the default model for the account, the
+run carries on with `eleven_multilingual_v2`.
 
 **If it fails.** The text lesson is written first and stays published whatever happens to voice.
 Voice never blocks, delays past its deadline of about 45 seconds, or unpublishes a lesson.
@@ -106,7 +127,7 @@ Optional settings, as environment variables on the same server:
 | Variable | Meaning | Default |
 |---|---|---|
 | `LEARNING_TOOL_ELEVENLABS_VOICE_ID` | Which ElevenLabs voice to use | One of the account's voices, chosen automatically |
-| `LEARNING_TOOL_ELEVENLABS_MODEL` | Which ElevenLabs model to use | `eleven_multilingual_v2` |
+| `LEARNING_TOOL_ELEVENLABS_MODEL` | Which ElevenLabs model to use | `eleven_v4_turbo` |
 | `LEARNING_TOOL_VOICE_MAX_CHARS` | The most characters one publish may send | 12000 |
 
 A setting that is present but malformed turns voice off rather than falling back to a default, so

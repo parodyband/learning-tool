@@ -49,7 +49,7 @@ describe('voiceConfigFromEnv: when voice is off', () => {
 
 describe('voiceConfigFromEnv: when voice is on', () => {
   it('applies the defaults', () => {
-    expect(voiceConfigFromEnv({ [KEY_VAR]: FAKE_KEY })).toEqual({ provider: 'elevenlabs', model: 'eleven_multilingual_v2', voiceId: null, maxChars: 12000 });
+    expect(voiceConfigFromEnv({ [KEY_VAR]: FAKE_KEY })).toEqual({ provider: 'elevenlabs', model: 'eleven_v4_turbo', voiceId: null, maxChars: 12000 });
   });
 
   it('accepts a key with surrounding whitespace', () => {
@@ -71,7 +71,7 @@ describe('voiceConfigFromEnv: when voice is on', () => {
     ['an unfilled placeholder', '${user_config.voice_id}'],
   ])('treats an optional setting that is %s as not set', (_name, value) => {
     const config = voiceConfigFromEnv({ [KEY_VAR]: FAKE_KEY, [VOICE_VAR]: value, [MODEL_VAR]: value, [MAX_VAR]: value });
-    expect(config).toEqual({ provider: 'elevenlabs', model: 'eleven_multilingual_v2', voiceId: null, maxChars: 12000 });
+    expect(config).toEqual({ provider: 'elevenlabs', model: 'eleven_v4_turbo', voiceId: null, maxChars: 12000 });
     expect(voiceEnvProblems({ [KEY_VAR]: FAKE_KEY, [VOICE_VAR]: value, [MODEL_VAR]: value, [MAX_VAR]: value })).toEqual([]);
   });
 

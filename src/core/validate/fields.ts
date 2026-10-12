@@ -435,6 +435,7 @@ function clipFields(c: Collector, scene: ClipScene): void {
       else predictFields(c, beat.gate, `${p}.gate`);
     }
     blockField(c, beat.caption, `${p}.caption`);
+    add(c, `${p}.say`, beat.say, 'spoken script', EXEMPT);
     beat.do.forEach((action, k) => {
       const a = `${p}.do[${k}]`;
       switch (action.verb) {

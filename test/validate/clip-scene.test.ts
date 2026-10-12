@@ -413,7 +413,7 @@ describe('the shape of a clip, said so that it can be fixed', () => {
   const fixOf = (kind: Kind, change: (s: Loose) => void): Issue => changedHonest(kind, change).errors[0]!;
 
   it('names the nearest key and the valid ones', () => {
-    expect(fixOf('flow', (s) => { s.beats[0].actions = s.beats[0].do; delete s.beats[0].do; })).toMatchObject({ code: 'UNKNOWN_FIELD', path: 'beats[0].actions', fix: 'Rename "actions" to "do". Valid fields here: caption, do, gate, at.' });
+    expect(fixOf('flow', (s) => { s.beats[0].actions = s.beats[0].do; delete s.beats[0].do; })).toMatchObject({ code: 'UNKNOWN_FIELD', path: 'beats[0].actions', fix: 'Rename "actions" to "do". Valid fields here: caption, say, do, gate, at.' });
     expect(fixOf('cells', (s) => { s.beats[2].predict = s.beats[2].gate; delete s.beats[2].gate; })).toMatchObject({ code: 'UNKNOWN_FIELD', path: 'beats[2].predict', expected: 'gate' });
     expect(fixOf('flow', (s) => (s.beats[0].do[0].duration = 400))).toMatchObject({ code: 'UNKNOWN_FIELD', path: 'beats[0].do[0].duration', fix: 'Remove "duration". Valid fields here: verb, target, targets, upto, with, on.' });
     expect(fixOf('chart', (s) => (s.stage.colour = 'red'))).toMatchObject({ code: 'UNKNOWN_FIELD', path: 'stage.colour', fix: 'Remove "colour". Valid fields here: kind, unit, max, yLabel, mark, bars, stats, cites, provenance.' });

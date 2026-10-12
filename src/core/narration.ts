@@ -67,7 +67,8 @@ export function narrationSegments(lesson: LessonV2): NarrationSegment[] {
   for (const scene of lesson.scenes) {
     switch (scene.kind) {
       case 'clip':
-        scene.beats.forEach((beat, i) => push(beatSegment(scene.id, i), scene.id, blockText(beat.caption)));
+        // A beat's `say` is the caption respelt for the ear; when the author wrote one, that is what is spoken.
+        scene.beats.forEach((beat, i) => push(beatSegment(scene.id, i), scene.id, beat.say !== undefined ? sentence(beat.say) : blockText(beat.caption)));
         break;
       case 'narration':
         push(scene.id, scene.id, blocksText(scene.blocks));

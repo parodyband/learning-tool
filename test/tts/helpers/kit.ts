@@ -23,10 +23,13 @@ export const MODEL_VAR = 'LEARNING_TOOL_ELEVENLABS_MODEL';
 export const MAX_VAR = 'LEARNING_TOOL_VOICE_MAX_CHARS';
 
 /** Backoff in milliseconds instead of seconds, so retry tests take no time. */
-export const FAST = { backoffMs: [2, 4], requestTimeoutMs: 2000 } as const;
+/** Two requests at a time and no growth: what the tests of retries, limits and deadlines were written against. */
+export const FAST = { backoffMs: [2, 4], requestTimeoutMs: 2000, concurrency: 2, maxConcurrency: 2 } as const;
+/** The model the general tests name, so that the default model's fallback is tested where it is the subject. */
+export const OLDER_MODEL = 'eleven_multilingual_v2';
 
 export function configure(extra: Record<string, string> = {}): VoiceConfig {
-  const config = voiceConfigFromEnv({ [KEY_VAR]: FAKE_KEY, ...extra });
+  const config = voiceConfigFromEnv({ [KEY_VAR]: FAKE_KEY, [MODEL_VAR]: OLDER_MODEL, ...extra });
   if (!config) throw new Error('test setup: voice configuration came back off');
   return config;
 }

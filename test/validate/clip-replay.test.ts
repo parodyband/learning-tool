@@ -38,7 +38,7 @@ const REPLAY: Array<[what: string, kind: Kind, change: (s: Loose) => void, expec
   // ----- the caption is one block
   ['a caption sent as a sentence', 'flow', (s) => (s.beats[0].caption = 'Binary search only works when the data is sorted.'), [['WRONG_TYPE', 'beats[0].caption', /A caption is one block, an object: \{"type": "claim", "text": "\.\.\.", "cites": \["e1"\]\}/]]],
   ['a caption sent as a list of blocks', 'flow', (s) => (s.beats[0].caption = [s.beats[0].caption]), [['WRONG_TYPE', 'beats[0].caption', /A caption is ONE block, not a list/]]],
-  ['`text` where `caption` belongs', 'flow', (s) => { s.beats[0].text = s.beats[0].caption; delete s.beats[0].caption; }, [['MISSING_FIELD', 'beats[0].caption', /Add it/], ['UNKNOWN_FIELD', 'beats[0].text', /Valid fields here: caption, do, gate, at\./]]],
+  ['`text` where `caption` belongs', 'flow', (s) => { s.beats[0].text = s.beats[0].caption; delete s.beats[0].caption; }, [['MISSING_FIELD', 'beats[0].caption', /Add it/], ['UNKNOWN_FIELD', 'beats[0].text', /Valid fields here: caption, say, do, gate, at\./]]],
   ['`cite` on a claim caption', 'flow', (s) => { s.beats[0].caption.cite = 'e3'; delete s.beats[0].caption.cites; }, [['UNKNOWN_FIELD', 'beats[0].caption.cite', /Rename "cite" to "cites"/]]],
 
   // ----- names carried over from the older format, or guessed
@@ -46,7 +46,7 @@ const REPLAY: Array<[what: string, kind: Kind, change: (s: Loose) => void, expec
   ['`figure` for `stage`', 'flow', (s) => { s.figure = { type: 'flow', ...s.stage }; delete s.stage; }, [['UNKNOWN_FIELD', 'figure', /Rename "figure" to "stage"/]]],
   ['`type` for `kind`, on the scene', 'flow', (s) => { s.type = 'clip'; delete s.kind; }, [['UNKNOWN_FIELD', 'type', /Rename "type" to "kind"\. Valid values for "kind": .*"clip"\./]]],
   ['`type` for `kind`, on the stage', 'flow', (s) => { s.stage.type = 'flow'; delete s.stage.kind; }, [['UNKNOWN_FIELD', 'stage.type', /Rename "type" to "kind"\. Valid values for "kind": "sequence", "cells", "dots", "chart", "flow", "words", "lines", "timeline", "frame"\./]]],
-  ['a highlight on a beat', 'flow', (s) => (s.beats[0].highlight = ['sorted']), [['UNKNOWN_FIELD', 'beats[0].highlight', /Remove "highlight"\. Valid fields here: caption, do, gate, at\./]]],
+  ['a highlight on a beat', 'flow', (s) => (s.beats[0].highlight = ['sorted']), [['UNKNOWN_FIELD', 'beats[0].highlight', /Remove "highlight"\. Valid fields here: caption, say, do, gate, at\./]]],
   ['the fields of a question on a gate', 'cells', (s) => (s.beats[2].gate = { question: s.beats[2].gate.prompt, choices: s.beats[2].gate.options }), [['UNKNOWN_FIELD', 'beats[2].gate.question', /Rename "question" to "prompt"/], ['UNKNOWN_FIELD', 'beats[2].gate.choices', /Rename "choices" to "options"/]]],
   ['a misconception on an option of a gate', 'cells', (s) => (s.beats[2].gate.options[1].misconception = 'Thinks the larger half goes'), [['UNKNOWN_FIELD', 'beats[2].gate.options[1].misconception', /Valid fields here: text, correct, feedback\./]]],
   ['the fields of a chart figure on a chart stage', 'line', (s) => Object.assign(s.stage, { data: 'illustrative', xLabel: 'Items' }), [['UNKNOWN_FIELD', 'stage.data', /Valid fields here: kind, unit, max, yLabel, mark, xs, series, stats, cites, provenance\./], ['UNKNOWN_FIELD', 'stage.xLabel', /Remove "xLabel"/]]],

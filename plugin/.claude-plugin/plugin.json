@@ -1,7 +1,7 @@
 {
   "name": "learning-tool",
   "displayName": "Learning Tool",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Learn anything from your own agent: it researches the topic and builds a short interactive lesson of animated clips, predictions and sliders you can drag, with a source behind every claim. One offline page.",
   "author": {
     "name": "Austin Crane"

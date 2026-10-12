@@ -49,16 +49,19 @@ export interface Failure {
   stop: boolean;
   /** ElevenLabs refused the voice or the model, so a remembered voice choice may be stale. */
   voiceRefused?: boolean;
+  /** The refusal may be about the model and not this text: worth one try with the fallback model. */
+  modelSuspect?: boolean;
   retryAfterMs?: number;
 }
 
-export const fail = (code: VoiceFailureCode, how: { retry?: boolean; stop?: boolean; status?: number; voiceRefused?: boolean } = {}): Failure => ({
+export const fail = (code: VoiceFailureCode, how: { retry?: boolean; stop?: boolean; status?: number; voiceRefused?: boolean; modelSuspect?: boolean } = {}): Failure => ({
   ok: false,
   code,
   retry: how.retry ?? false,
   stop: how.stop ?? false,
   ...(how.status === undefined ? {} : { status: how.status }),
   ...(how.voiceRefused ? { voiceRefused: true } : {}),
+  ...(how.modelSuspect ? { modelSuspect: true } : {}),
 });
 
 // Error bodies look like {"detail": {type, code, status, message}} with `status` a legacy alias of
@@ -66,6 +69,8 @@ export const fail = (code: VoiceFailureCode, how: { retry?: boolean; stop?: bool
 // `quota_exceeded` arrives with HTTP 401, which is why a token can override the status.
 const QUOTA_TOKENS = new Set(['quota_exceeded', 'insufficient_credits', 'payment_required', 'subscription_required']);
 const VOICE_TOKENS = new Set(['voice_not_found', 'invalid_voice_id', 'voice_access_denied', 'model_access_denied', 'model_not_found']);
+// Named refusals of the model itself. An unnamed 400 or 422 is also treated as possibly the model.
+const MODEL_TOKENS = new Set(['model_access_denied', 'model_not_found', 'invalid_model', 'unsupported_model', 'model_not_supported', 'model_can_not_do_text_to_speech']);
 
 /**
  * Maps a non-200 response to a failure. Retried: 408, 429 and 5xx. Never retried, and they end the
@@ -74,6 +79,13 @@ const VOICE_TOKENS = new Set(['voice_not_found', 'invalid_voice_id', 'voice_acce
 export function classifyStatus(status: number, tokens: readonly string[]): Failure {
   const quota = tokens.some((t) => QUOTA_TOKENS.has(t));
   const voice = tokens.some((t) => VOICE_TOKENS.has(t));
+  const named = tokens.some((t) => MODEL_TOKENS.has(t));
+  const out = classify(status, quota, voice);
+  const unnamed = (status === 400 || status === 422) && !quota && !tokens.some((t) => VOICE_TOKENS.has(t) && !MODEL_TOKENS.has(t));
+  return named || unnamed ? { ...out, modelSuspect: true } : out;
+}
+
+function classify(status: number, quota: boolean, voice: boolean): Failure {
   switch (status) {
     case 401:
       return fail(quota ? 'VOICE_QUOTA' : 'VOICE_AUTH', { stop: true, status });

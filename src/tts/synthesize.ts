@@ -5,7 +5,7 @@ import path from 'node:path';
 import type { AudioBundle, AudioClip, NarrationSegment } from '../core/types';
 import { ClipCache, clipKey, DEFAULT_CACHE_MAX_BYTES, MAX_CLIP_BYTES } from './cache';
 import { fail, VOICE_MESSAGES, worst, type Failure, type VoiceCode, type VoiceFailureCode } from './codes';
-import { ID_PATTERN, secretOf, type VoiceConfig } from './config';
+import { DEFAULT_MODEL, FALLBACK_MODEL, ID_PATTERN, secretOf, type VoiceConfig } from './config';
 import { call, DEFAULT_BACKOFF_MS, DEFAULT_REQUEST_TIMEOUT_MS, readCapped, type CallContext, type CallResult, type FetchLike, type Secret } from './http';
 import { looksLikeMp3 } from './mp3';
 import { resolveOrigin, type TestBaseUrl } from './origin';
@@ -16,8 +16,13 @@ import { displayName, knownVoiceName, listVoices, pickVoice } from './voices';
 export const OUTPUT_FORMAT = 'mp3_44100_64';
 export const DEFAULT_DEADLINE_MS = 45_000;
 const MAX_DEADLINE_MS = 10 * 60 * 1000;
-/** The free tier allows two concurrent requests on the default model. */
-const CONCURRENCY = 2;
+/**
+ * Clips are requested in parallel so that a lesson's audio is complete in seconds. A run starts
+ * with a few requests at once and, as soon as a response says how many the account allows
+ * (`maximum-concurrent-requests`), runs that many, up to the ceiling here.
+ */
+const CONCURRENCY = 4;
+const MAX_CONCURRENCY = 20;
 // `seed` is best effort on ElevenLabs' side; fixing it removes one source of variation between runs
 // and it is part of the cache key, so changing it is a new set of clips.
 const SEED = 20261010;
@@ -41,7 +46,7 @@ export interface SynthesizeOptions {
   /** Abort to stop early, for example when the MCP connection closes. */
   signal?: AbortSignal;
   /** Knobs for tests. Production leaves them alone. */
-  tuning?: { requestTimeoutMs?: number; backoffMs?: readonly number[]; cacheMaxBytes?: number };
+  tuning?: { requestTimeoutMs?: number; backoffMs?: readonly number[]; cacheMaxBytes?: number; concurrency?: number; maxConcurrency?: number };
 }
 
 export type VoiceSegmentStatus = 'ok' | 'cached' | 'failed' | 'skipped' | 'empty';
@@ -181,6 +186,8 @@ interface Outcome {
   voice: ChosenVoice | null;
   cache: { usable: boolean; writes: number };
   requests: number;
+  /** The default model was refused and the run went on with the older one. */
+  modelFallback?: boolean;
 }
 
 function conclude(items: readonly Item[], jobs: readonly Job[], o: Outcome): SynthesisResult {
@@ -363,7 +370,14 @@ export async function synthesizeLesson(
 
     const queue = jobs.filter((j) => j.state === 'pending');
     let cursor = 0;
-    let limit = Math.min(CONCURRENCY, queue.length);
+    const ceiling = Math.max(1, opts.tuning?.maxConcurrency ?? MAX_CONCURRENCY);
+    let limit = Math.min(Math.max(1, opts.tuning?.concurrency ?? CONCURRENCY), ceiling, queue.length);
+    // The model for this run. If the fast default is refused, the run carries on with the older one.
+    let model = config.model;
+    // Set by the first request the default model fails in a way that may be the model's doing:
+    // that request is tried once on the older model, and every worker waits to hear how it went.
+    let probe: Promise<boolean> | null = null;
+    const running: Promise<void>[] = [];
     let failedForGood = 0;
     let totalBytes = jobs.reduce((n, j) => n + (j.bytes?.byteLength ?? 0), 0);
 
@@ -373,22 +387,55 @@ export async function synthesizeLesson(
         const job = queue[cursor];
         if (!job) return;
         cursor += 1;
-        const out = await call<Uint8Array>(ctx, {
-          method: 'POST',
-          path: `/v1/text-to-speech/${chosen.id}`,
-          query: { output_format: OUTPUT_FORMAT },
-          json: { text: job.text, model_id: config.model, seed: SEED },
-          accept: 'audio/mpeg',
-          read: readAudio,
-          onAttempt: () => {
-            job.attempts += 1;
-          },
-          onHeaders: (headers) => {
-            // The account's own concurrency ceiling, when it is lower than ours.
-            const max = Number.parseInt(headers.get('maximum-concurrent-requests') ?? '', 10);
-            if (Number.isInteger(max) && max >= 1 && max < limit) limit = max;
-          },
-        });
+        const speak = (withModel: string): Promise<CallResult<Uint8Array>> =>
+          call<Uint8Array>(ctx, {
+            method: 'POST',
+            path: `/v1/text-to-speech/${chosen.id}`,
+            query: { output_format: OUTPUT_FORMAT },
+            json: { text: job.text, model_id: withModel, seed: SEED },
+            accept: 'audio/mpeg',
+            read: readAudio,
+            onAttempt: () => {
+              job.attempts += 1;
+            },
+            onHeaders: (headers) => {
+              // The account's own ceiling: fewer workers when it is lower than ours, more when it allows more.
+              const max = Number.parseInt(headers.get('maximum-concurrent-requests') ?? '', 10);
+              if (!Number.isInteger(max) || max < 1) return;
+              const next = Math.min(max, ceiling, queue.length);
+              if (next < limit) limit = next;
+              else if (next > limit) {
+                const from = limit;
+                limit = next;
+                for (let extra = from; extra < next; extra++) running.push(worker(extra));
+              }
+            },
+          });
+        const used = model;
+        const onFallback = async (): Promise<CallResult<Uint8Array>> => {
+          job.key = clipKey({ model: FALLBACK_MODEL, voiceId: chosen.id, format: OUTPUT_FORMAT, seed: SEED, text: job.text });
+          const cached = await cache.read(job.key);
+          return cached ? { ok: true, value: cached } : speak(FALLBACK_MODEL);
+        };
+        let out = await speak(used);
+        if (!out.ok && out.modelSuspect && used === DEFAULT_MODEL && !halted) {
+          if (probe === null) {
+            // This request finds out: if the older model takes the same text, the model was the problem.
+            let mine: CallResult<Uint8Array> = out;
+            probe = (async () => {
+              mine = await onFallback();
+              if (mine.ok) {
+                model = FALLBACK_MODEL;
+                outcome.modelFallback = true;
+              }
+              return mine.ok;
+            })();
+            await probe;
+            out = mine;
+          } else if (await probe) {
+            out = await onFallback();
+          }
+        }
         const result: CallResult<Uint8Array> = out.ok && totalBytes + out.value.byteLength > MAX_TOTAL_BYTES ? BAD_AUDIO : out;
         if (result.ok) {
           job.bytes = result.value;
@@ -409,7 +456,9 @@ export async function synthesizeLesson(
         if (result.stop || failedForGood >= FAILED_SEGMENTS_BEFORE_STOP) halted = true;
       }
     };
-    await Promise.all(Array.from({ length: limit }, (_, slot) => worker(slot)));
+    for (let slot = 0; slot < limit; slot++) running.push(worker(slot));
+    // Workers may be added while the run is under way, so wait for the list as it grows.
+    for (let i = 0; i < running.length; i++) await running[i];
 
     // A refused voice that we picked ourselves is forgotten, so the next publish chooses again.
     if (chosen.source === 'account' && jobs.some((j) => j.failure?.voiceRefused)) await cache.forgetVoice();

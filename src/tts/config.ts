@@ -11,7 +11,10 @@ export const VOICE_VAR = 'LEARNING_TOOL_ELEVENLABS_VOICE_ID';
 export const MODEL_VAR = 'LEARNING_TOOL_ELEVENLABS_MODEL';
 export const MAX_CHARS_VAR = 'LEARNING_TOOL_VOICE_MAX_CHARS';
 
-export const DEFAULT_MODEL = 'eleven_multilingual_v2';
+/** The fast model: a lesson's clips are made in seconds. */
+export const DEFAULT_MODEL = 'eleven_v4_turbo';
+/** Used for the rest of a run when ElevenLabs refuses the default model for this account or endpoint. */
+export const FALLBACK_MODEL = 'eleven_multilingual_v2';
 export const DEFAULT_MAX_CHARS = 12_000;
 const MAX_CHARS_CEILING = 1_000_000;
 
